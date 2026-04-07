@@ -1,0 +1,1036 @@
+/* ================================================================
+   MOONAPP — GLOBAL STYLESHEET
+   Lunar dark-mode, glassmorphism, smooth micro-animations.
+   Derived from SunApp/style.css — palette swapped to lunar silver/blue.
+   Browser support: all modern browsers (no IE).
+================================================================ */
+
+/* ── Design tokens ─────────────────────────────────────────── */
+:root {
+  /* Background palette — deep midnight space (darker than SunApp) */
+  --bg-base:        #050810;
+  --bg-surface:     #090d1e;
+  --bg-card:        rgba(9, 13, 32, 0.75);
+  --bg-card-hover:  rgba(14, 20, 48, 0.88);
+
+  /* Accent colours — lunar silver-blue palette */
+  --accent-silver:  #c8d8f0;   /* bright lunar silver        */
+  --accent-blue:    #7b9fd4;   /* slate blue                 */
+  --accent-indigo:  #5b72b8;   /* deep indigo accent         */
+  --accent-teal:    #4fc3f7;   /* moonset teal               */
+  --accent-violet:  #9b7fd4;   /* transit violet             */
+  --accent-new:     #b0b8d4;   /* new-moon pale              */
+
+  /* Text */
+  --text-primary:   #e8eeff;
+  --text-secondary: #7b8fc4;
+  --text-muted:     #3a4570;
+
+  /* Glass border */
+  --border:         rgba(255, 255, 255, 0.07);
+  --border-active:  rgba(200, 216, 240, 0.30);
+
+  /* Gradients */
+  --grad-hero:      linear-gradient(135deg, #030614 0%, #0a0e24 50%, #060c1e 100%);
+  --grad-card:      linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+  --grad-moonrise:  linear-gradient(135deg, #1a2a5e 0%, #3a5f8a 100%);
+  --grad-transit:   linear-gradient(135deg, #3a2a6e 0%, #7b5fd4 100%);
+  --grad-moonset:   linear-gradient(135deg, #1a4a5e 0%, #4fc3f7 100%);
+  --grad-primary:   linear-gradient(135deg, #c8d8f0 0%, #7b9fd4 100%);
+  --grad-new-moon:  linear-gradient(135deg, #1a1e3a 0%, #3a3e5a 100%);
+  --grad-full-moon: linear-gradient(135deg, #2a3060 0%, #7b9fd4 100%);
+
+  /* Spacing scale */
+  --sp-xs:  0.25rem;
+  --sp-sm:  0.5rem;
+  --sp-md:  1rem;
+  --sp-lg:  1.5rem;
+  --sp-xl:  2rem;
+  --sp-2xl: 3rem;
+
+  /* Typography */
+  --font-sans: 'InterVariable', 'Inter', system-ui, sans-serif;
+  --font-mono: 'InterVariable', 'Inter', system-ui, sans-serif;
+
+  /* Radii */
+  --r-sm:   6px;
+  --r-md:   12px;
+  --r-lg:   20px;
+  --r-full: 9999px;
+
+  /* Shadows */
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-glow: 0 0 40px rgba(123, 159, 212, 0.1);
+
+  /* Transitions */
+  --t-fast: 150ms ease;
+  --t-med:  280ms cubic-bezier(0.4, 0, 0.2, 1);
+  --t-slow: 420ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Reset & base ───────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  /* Star-field background — more stars than SunApp for a night-sky feel */
+  background-image:
+    radial-gradient(1px 1px at 8%  12%, rgba(200,216,240,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 22% 48%, rgba(200,216,240,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 38% 78%, rgba(200,216,240,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 52% 18%, rgba(200,216,240,0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 67% 62%, rgba(200,216,240,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 30%, rgba(200,216,240,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92% 85%, rgba(200,216,240,0.3) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 15% 65%, rgba(200,216,240,0.2) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 44% 40%, rgba(200,216,240,0.15) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 73% 10%, rgba(200,216,240,0.2) 0%, transparent 100%),
+    radial-gradient(2px 2px at 5%  90%, rgba(200,216,240,0.15) 0%, transparent 100%),
+    radial-gradient(2px 2px at 58% 92%, rgba(200,216,240,0.12) 0%, transparent 100%),
+    var(--grad-hero);
+  background-attachment: fixed;
+}
+
+/* ── Typography utilities ───────────────────────────────────── */
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* ── Layout containers ──────────────────────────────────────── */
+.main-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--sp-md) var(--sp-md) var(--sp-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-lg);
+}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+.site-header {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: var(--sp-2xl) var(--sp-md) var(--sp-xl);
+}
+
+/* Cold blue-white radial glow — different from SunApp's warm amber */
+.header-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 70% at 50% 30%, rgba(123,159,212,0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.header-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-md);
+}
+
+/* Moon icon — slow drift instead of spin */
+.moon-icon {
+  width: 80px;
+  height: 80px;
+  animation: moon-drift 40s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(123, 159, 212, 0.45));
+}
+
+/* Gentle rocking animation for the moon icon */
+@keyframes moon-drift {
+  0%   { transform: rotate(-3deg) translateY(0px); }
+  25%  { transform: rotate(0deg)  translateY(-4px); }
+  50%  { transform: rotate(3deg)  translateY(0px); }
+  75%  { transform: rotate(0deg)  translateY(4px); }
+  100% { transform: rotate(-3deg) translateY(0px); }
+}
+
+.header-text h1 {
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+
+.tagline {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: var(--sp-xs);
+}
+
+/* ── CARDS ──────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-xl);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top-edge highlight (glass effect) */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+}
+
+/* ── TABS ───────────────────────────────────────────────────── */
+.tab-group {
+  display: flex;
+  gap: var(--sp-xs);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--r-md);
+  padding: var(--sp-xs);
+  margin-bottom: var(--sp-lg);
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-xs);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--t-med), color var(--t-med);
+  white-space: nowrap;
+}
+
+.tab svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* Active tab — silver-blue glow instead of SunApp's gold */
+.tab.active {
+  background: linear-gradient(135deg, rgba(200,216,240,0.12), rgba(123,159,212,0.09));
+  color: var(--accent-silver);
+  box-shadow: 0 0 12px rgba(200,216,240,0.08);
+}
+
+.tab:hover:not(.active) {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+
+/* ── TAB PANELS ─────────────────────────────────────────────── */
+.tab-panel {
+  animation: fade-in var(--t-med) forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── FORM ELEMENTS ──────────────────────────────────────────── */
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+  margin-bottom: var(--sp-md);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-md);
+}
+
+label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Shared input styles */
+.text-input,
+.search-input,
+input[type="date"].text-input {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Focus: silver glow instead of gold */
+.text-input:focus,
+.search-input:focus {
+  border-color: var(--accent-silver);
+  box-shadow: 0 0 0 3px rgba(200,216,240,0.10);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* Remove browser number spinners */
+.text-input[type="number"]::-webkit-inner-spin-button,
+.text-input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Date picker icon tint — blue instead of gold */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(1) saturate(1.5) hue-rotate(200deg);
+  cursor: pointer;
+}
+
+/* ── SEARCH WRAPPER ─────────────────────────────────────────── */
+.search-wrapper {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color var(--t-fast);
+}
+
+.search-input {
+  padding-left: 2.4rem;
+}
+
+.search-wrapper:focus-within .search-icon {
+  color: var(--accent-silver);
+}
+
+/* ── DROPDOWN ───────────────────────────────────────────────── */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: #090d1e;
+  border: 1px solid var(--border-active);
+  border-radius: var(--r-md);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 100;
+  list-style: none;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.7);
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+  animation: fade-in var(--t-fast) forwards;
+}
+
+.dropdown li {
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-sm);
+  transition: background var(--t-fast), color var(--t-fast);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.dropdown li:last-child { border-bottom: none; }
+
+.dropdown li:hover,
+.dropdown li.highlighted {
+  background: rgba(200,216,240,0.08);
+  color: var(--accent-silver);
+}
+
+.dropdown li .city-name    { font-weight: 500; }
+.dropdown li .city-country { font-size: 0.75rem; color: var(--text-muted); }
+
+/* Selected-city badge */
+.selected-city {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  background: rgba(200,216,240,0.07);
+  border: 1px solid rgba(200,216,240,0.18);
+  border-radius: var(--r-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  font-size: 0.88rem;
+  color: var(--accent-silver);
+  margin-top: var(--sp-xs);
+}
+
+.clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0 var(--sp-xs);
+  margin-left: auto;
+  transition: color var(--t-fast);
+}
+
+.clear-btn:hover { color: #ff6b6b; }
+
+.city-missing-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+  margin-top: var(--sp-xs);
+  text-align: right;
+}
+
+.city-missing-note a {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--t-fast);
+}
+
+.city-missing-note a:hover { color: var(--accent-silver); }
+
+/* ── DEVICE PANEL ───────────────────────────────────────────── */
+.device-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-md) 0;
+}
+
+.device-hint {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.device-coords {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent-teal);
+  text-align: center;
+  background: rgba(79, 195, 247, 0.07);
+  border: 1px solid rgba(79, 195, 247, 0.18);
+  border-radius: var(--r-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  width: 100%;
+}
+
+/* ── DATE FIELD ─────────────────────────────────────────────── */
+.date-field {
+  margin-top: var(--sp-lg);
+  padding-top: var(--sp-lg);
+  border-top: 1px solid var(--border);
+}
+
+/* ── BUTTONS ────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-sm);
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--r-md);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--t-fast), box-shadow var(--t-fast), opacity var(--t-fast);
+  letter-spacing: 0.01em;
+}
+
+.btn svg { width: 18px; height: 18px; }
+
+.btn:active { transform: scale(0.97); }
+
+/* Primary CTA — lunar silver gradient */
+.btn-primary {
+  width: 100%;
+  margin-top: var(--sp-lg);
+  background: var(--grad-primary);
+  color: #050810;
+  box-shadow: 0 4px 16px rgba(123, 159, 212, 0.3);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 24px rgba(123, 159, 212, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Secondary button */
+.btn-secondary {
+  background: rgba(79, 195, 247, 0.09);
+  border: 1px solid rgba(79, 195, 247, 0.22);
+  color: var(--accent-teal);
+}
+
+.btn-secondary:hover {
+  background: rgba(79, 195, 247, 0.16);
+  box-shadow: 0 0 16px rgba(79, 195, 247, 0.14);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ── ERROR MESSAGE ──────────────────────────────────────────── */
+.error-msg {
+  margin-top: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-md);
+  background: rgba(255, 107, 107, 0.09);
+  border: 1px solid rgba(255, 107, 107, 0.28);
+  border-radius: var(--r-sm);
+  color: #ff6b6b;
+  font-size: 0.88rem;
+  text-align: center;
+  animation: fade-in var(--t-med) forwards;
+}
+
+/* ── RESULTS CARD ───────────────────────────────────────────── */
+.results-card {
+  animation: slide-up var(--t-slow) forwards;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── META PILLS ─────────────────────────────────────────────── */
+.meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-lg);
+}
+
+.pill {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-sm) var(--sp-md);
+}
+
+.pill-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pill-value {
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+/* ── MOON TIMES GRID (Row 1: Moonrise / Transit / Moonset) ──── */
+.moon-times-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-lg);
+}
+
+.moon-time-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-lg) var(--sp-sm);
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+  text-align: center;
+}
+
+.moon-time-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+}
+
+/* Moonrise — deep blue */
+.moonrise-card {
+  background: linear-gradient(160deg, rgba(26,42,94,0.45) 0%, rgba(58,95,138,0.18) 100%);
+  border-color: rgba(123,159,212,0.2);
+}
+
+/* Transit — indigo/violet */
+.transit-card {
+  background: linear-gradient(160deg, rgba(58,42,110,0.45) 0%, rgba(123,95,212,0.18) 100%);
+  border-color: rgba(155,127,212,0.25);
+}
+
+/* Moonset — teal */
+.moonset-card {
+  background: linear-gradient(160deg, rgba(26,74,94,0.45) 0%, rgba(79,195,247,0.12) 100%);
+  border-color: rgba(79,195,247,0.2);
+}
+
+.moon-time-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  animation: bounce-in var(--t-slow) both;
+}
+
+.moon-time-card:nth-child(2) .moon-time-icon { animation-delay: 0.1s; }
+.moon-time-card:nth-child(3) .moon-time-icon { animation-delay: 0.2s; }
+
+@keyframes bounce-in {
+  0%   { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.moon-time-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.moon-time-value {
+  font-size: clamp(0.95rem, 3vw, 1.2rem);
+  font-weight: 500;
+  color: var(--text-primary);
+  word-break: break-word;
+  text-align: center;
+}
+
+/* Polar conditions */
+.moon-time-value.polar-always-up   { color: var(--accent-silver); font-size: 0.82rem; }
+.moon-time-value.polar-always-down { color: var(--text-muted);   font-size: 0.82rem; }
+
+/* ── MOON DETAIL GRID (Row 2: Phase + Distance) ─────────────── */
+.moon-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-lg);
+}
+
+.detail-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-lg) var(--sp-md);
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+}
+
+.detail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+/* Phase card — prominent, indigo accent */
+.phase-card {
+  background: linear-gradient(145deg, rgba(42,32,80,0.5) 0%, rgba(91,114,184,0.12) 100%);
+  border-color: rgba(155,127,212,0.22);
+}
+
+/* Distance card — subtle teal */
+.distance-card {
+  background: linear-gradient(145deg, rgba(20,40,70,0.5) 0%, rgba(79,195,247,0.10) 100%);
+  border-color: rgba(79,195,247,0.18);
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Canvas container for the phase disc */
+.phase-disc-wrapper {
+  flex-shrink: 0;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(123,159,212,0.2);
+}
+
+#phase-canvas {
+  display: block;
+  border-radius: 50%;
+}
+
+.phase-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.distance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-icon {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: var(--sp-xs);
+}
+
+.detail-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.detail-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Phase name gets a gradient tint */
+.phase-name {
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.detail-sub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+/* ── LUNATION GRID (Row 3: Next New / Full Moon) ─────────────── */
+.lunation-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-lg);
+}
+
+.lunation-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-xs);
+  padding: var(--sp-md);
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  text-align: center;
+  transition: transform var(--t-fast);
+}
+
+.lunation-card:hover { transform: translateY(-2px); }
+
+/* New moon card — very dark */
+.new-moon-card {
+  background: var(--grad-new-moon);
+  border-color: rgba(176,184,212,0.15);
+}
+
+/* Full moon card — brighter blue */
+.full-moon-card {
+  background: var(--grad-full-moon);
+  border-color: rgba(123,159,212,0.22);
+}
+
+.lunation-icon {
+  font-size: 1.6rem;
+  animation: bounce-in var(--t-slow) 0.3s both;
+}
+
+.lunation-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lunation-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* ── ILLUMINATION BAR ────────────────────────────────────────── */
+.illum-bar-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+.illum-bar-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.illum-bar-value {
+  font-size: 0.88rem;
+  color: var(--accent-silver);
+  margin-right: auto;
+}
+
+.illum-bar-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(0,0,0,0.45);
+  border-radius: var(--r-full);
+  overflow: hidden;
+  margin-top: var(--sp-xs);
+}
+
+.illum-bar-fill {
+  height: 100%;
+  background: var(--grad-primary);
+  border-radius: var(--r-full);
+  width: 0%; /* Set by JS */
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── LOADING OVERLAY ────────────────────────────────────────── */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 16, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-md);
+  z-index: 999;
+}
+
+.loading-overlay p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* CSS-only spinner — silver-blue tint */
+.spinner {
+  width: 42px;
+  height: 42px;
+  border: 3px solid rgba(200,216,240,0.15);
+  border-top-color: var(--accent-silver);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── FOOTER — Stormberry Branding ──────────────────────────── */
+.site-footer {
+  background: var(--bg-base);
+  border-top: 1px solid var(--border);
+  padding: 4rem 1.5rem 2rem;
+  margin-top: auto;
+}
+
+.footer-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.footer-brand { max-width: 320px; }
+
+.footer-logo {
+  font-family: var(--font-sans);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.footer-dot {
+  background: linear-gradient(135deg, #E21E26, #FF4D54);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.footer-tagline {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.footer-powered p {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  text-align: right;
+  max-width: 250px;
+  line-height: 1.6;
+}
+
+.footer-powered a {
+  color: var(--accent-teal);
+  text-decoration: none;
+  transition: color var(--t-fast);
+}
+
+.footer-powered a:hover { color: var(--accent-silver); }
+
+.footer-bottom {
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footer-social {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.footer-social a {
+  color: var(--text-secondary);
+  transition: all var(--t-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-social a:hover {
+  color: #E21E26;
+  transform: translateY(-2px);
+}
+
+.footer-bottom p { margin: 0; }
+
+.footer-privacy {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.8;
+  margin-top: 0.25rem !important;
+}
+
+.footer-ai {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+  margin-top: 0.15rem !important;
+}
+
+@media (max-width: 768px) {
+  .footer-inner {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  .footer-powered p {
+    text-align: center;
+    max-width: 100%;
+  }
+  .footer-bottom { gap: 0.8rem; }
+}
+
+/* ── UTILITIES ──────────────────────────────────────────────── */
+[hidden] { display: none !important; }
+
+/* ── RESPONSIVE BREAKPOINTS ─────────────────────────────────── */
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .card { padding: var(--sp-lg); }
+
+  .tab { font-size: 0.72rem; padding: var(--sp-sm) var(--sp-xs); }
+  .tab svg { display: none; }
+
+  .field-row { grid-template-columns: 1fr; }
+
+  /* Moon times: stack on mobile */
+  .moon-times-grid {
+    grid-template-columns: 1fr;
+    gap: var(--sp-sm);
+  }
+
+  .moon-time-card {
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+    padding: var(--sp-md);
+  }
+
+  .moon-time-icon { font-size: 1.4rem; }
+
+  /* Detail and lunation: stack on mobile */
+  .moon-detail-grid  { grid-template-columns: 1fr; }
+  .lunation-grid     { grid-template-columns: 1fr; }
+
+  .meta-pills { flex-direction: column; }
+  .pill { min-width: unset; }
+}
