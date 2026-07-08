@@ -1,7 +1,10 @@
 /**
  * MoonApp — app.js
  * A fully client-side moon data calculator.
- * Libraries: SunCalc (local), Intl API (built-in), Open-Meteo (GPS fallback).
+ * Libraries: SunCalc (local), Intl API (built-in).
+ * For raw GPS / device coords we resolve the timezone offline: typed
+ * coordinates use the nearest known city and device geolocation uses the
+ * browser's own IANA zone. Nothing hits the network.
  */
 
 'use strict';
@@ -2269,17 +2272,33 @@ function onGetLocation() {
 }
 
 /* ================================================================
-   SECTION 8 — TIMEZONE RESOLVER (Open-Meteo, GPS fallback only)
+   SECTION 8 — TIMEZONE RESOLVER (fully offline)
+   Timezone resolution never touches the network. City-tab zones come
+   straight from the bundled city database; typed coordinates resolve to
+   the nearest known city's zone; device geolocation uses the browser's
+   own IANA zone. Nothing hits the network.
 ================================================================ */
-async function resolveTimezone(lat, lon) {
-  const url =
-    'https://api.open-meteo.com/v1/forecast?latitude=' + lat
-    + '&longitude=' + lon + '&timezone=auto&forecast_days=1';
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error('Open-Meteo error ' + resp.status);
-  const data = await resp.json();
-  if (!data.timezone) throw new Error('No timezone in Open-Meteo response');
-  return { ianaId: data.timezone, abbreviation: data.timezone_abbreviation || '' };
+function nearestCityTimezone(lat, lon) {
+  // Timezones are large political regions and the bundled city list is dense
+  // near populated areas, so the nearest city's zone is the correct one in
+  // practice. Equirectangular distance is plenty for a nearest-neighbour pick.
+  let best = null, bestDist = Infinity;
+  for (const c of CITIES) {
+    let dLon = Math.abs(c.lon - lon);
+    if (dLon > 180) dLon = 360 - dLon;
+    const dLat = c.lat - lat;
+    const x = dLon * Math.cos(((lat + c.lat) / 2) * Math.PI / 180);
+    const dist = x * x + dLat * dLat;
+    if (dist < bestDist) { bestDist = dist; best = c; }
+  }
+  return best ? best.tz : (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+}
+
+function resolveTimezone(lat, lon) {
+  const ianaId = (state.tab === 'device')
+    ? (Intl.DateTimeFormat().resolvedOptions().timeZone || nearestCityTimezone(lat, lon))
+    : nearestCityTimezone(lat, lon);
+  return { ianaId, abbreviation: getTimezoneAbbreviation(ianaId, els.dateInput.value) };
 }
 
 /* ================================================================
