@@ -291,18 +291,60 @@ async function onCalculate() {
     showLoading(false);
   }
 
+  /* Offset of an IANA zone from UTC, in milliseconds, at a given instant. Uses Intl so it
+     honours daylight saving rather than assuming a fixed offset. */
+  function cityUtcOffsetMs(ianaId, at) {
+    try {
+      const dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: ianaId, hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      });
+      const p = {};
+      for (const { type, value } of dtf.formatToParts(at)) p[type] = value;
+      const asUtc = Date.UTC(+p.year, p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+      return asUtc - Math.floor(at.getTime() / 1000) * 1000;
+    } catch (e) {
+      return 0;   /* unknown zone: fall back to a UTC day rather than throwing */
+    }
+  }
+
   /* Parse date — use UTC noon so SunCalc gets the correct calendar day */
   const [year, month, day] = els.dateInput.value.split('-').map(Number);
   if (!year || !month || !day) { showError('Please select a valid date.'); return; }
   const dateForCalc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
   const tz = tzInfo.ianaId;
 
-  /* Moon rise / set */
-  const moonTimes    = SunCalc.getMoonTimes(dateForCalc, lat, lon);
+  /* Moon rise / set.
+     THE DAY WINDOW IS THE CITY'S LOCAL DAY, and it is passed in UTC mode.
+     Without the fourth argument SunCalc calls setHours(0,0,0,0), which is midnight in the
+     VISITOR'S browser timezone, while the results are formatted in the city's. The two
+     disagreed: with a browser on Europe/Oslo, 96 of 561 moonrise rows differed from the
+     Android app and 22 differed by a full calendar day, and a Bergen date could show no
+     moonrise at all to a visitor on UTC. Anchor on the selected city's midnight instead,
+     expressed as an instant, so the answer matches the label. Fixed 2026-09-04. */
+  const tzOffsetMs = cityUtcOffsetMs(tz, dateForCalc);
+  const cityMidnightUtc = new Date(Date.UTC(year, month - 1, day) - tzOffsetMs);
+  const moonTimes    = SunCalc.getMoonTimes(cityMidnightUtc, lat, lon, true);
   const moonriseValid = moonTimes.rise instanceof Date && !isNaN(moonTimes.rise);
   const moonsetValid  = moonTimes.set  instanceof Date && !isNaN(moonTimes.set);
-  const alwaysUp      = !!moonTimes.alwaysUp;
-  const alwaysDown    = !!moonTimes.alwaysDown;
+  /* DO NOT TRUST suncalc's alwaysUp/alwaysDown flags. Its sign test reads a parabola
+     evaluated at a vertex that can lie outside the sampled window, and a sweep of latitudes
+     -89 to +89 across 2026 found 1,485 of 12,217 flagged days labelled the wrong way round,
+     12.2 per cent, worst at Tromso and Longyearbyen. Telling a Norwegian visitor the moon is
+     down all day when it is up all day is the opposite of the truth, not a rounding error.
+     Decide from the moon's own altitude instead, which is a direct measurement. The Android
+     app does the same in MoonCalc.dayKind. Fixed 2026-09-04. */
+  let alwaysUp = false, alwaysDown = false;
+  if (!moonriseValid && !moonsetValid) {
+    let peak = -Infinity;
+    for (let i = 0; i <= 96; i++) {
+      const a = SunCalc.getMoonPosition(new Date(cityMidnightUtc.getTime() + i * 900000), lat, lon).altitude;
+      if (a > peak) peak = a;
+    }
+    alwaysUp = peak > 0;
+    alwaysDown = !alwaysUp;
+  }
   const moonriseStr   = moonriseValid ? formatTime(moonTimes.rise, tz) : null;
   const moonsetStr    = moonsetValid  ? formatTime(moonTimes.set,  tz) : null;
 

@@ -1,0 +1,21 @@
+# GitHub Pages serves moon.stormberry.as from this repository root.
+#
+# Everything listed below is source, tooling or build input that must never be
+# published. Without this file Pages would serve the whole Android tree,
+# including gradlew, the Gradle wrapper jar and local.properties.
+#
+# Added 2026-09-04, before android/ was committed, for the same reason SunApp's
+# was added on 2026-08-21: so that scaffolding the Android module cannot leak.
+#
+# disclaimer.html is deliberately NOT excluded: it is the published disclaimer the
+# site links to. Only the Markdown source of it is withheld.
+exclude:
+  - android/
+  - .venv/
+  - venv/
+  - README.md
+  - LICENSE
+  - zapstore.yaml
+  - fastlane/
+  - NOTICE
+  - DISCLAIMER.md

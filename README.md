@@ -1,42 +1,76 @@
 # MoonApp
 
-Sovereign, privacy-first lunar calculator. A sibling to [SunApp](https://sun.stormberry.as), covering moonrise, moon phase, lunar distance, upcoming lunations and global city lookups.
+Sovereign, privacy-first lunar calculator and astronomical alarm system. A direct sibling to [SunApp](https://sun.stormberry.as), covering moonrise, moonset, lunar phase, distance, upcoming lunations, and exact offline lunar alarms on Android.
 
-**Live:** [moon.stormberry.as](https://moon.stormberry.as)
+**Live Web App:** [moon.stormberry.as](https://moon.stormberry.as)  
+**Suggested CNAME:** `moon.stormberry.as`
+
+---
+
+## Android APK Distribution & Packages
+
+MoonApp ships in two distinct package editions:
+
+* **Zapstore / Sovereign APK:** `no.stormberry.moonapp`  
+  Direct, sovereign release signed with the Stormberry AS release key. Zero trackers, zero analytics, zero Google Play Services dependencies.
+* **Google Play Store Build:** `no.stormberry.moonapp.play`  
+  Separate package name specifically for Google Play distribution (`-PplayBuild=true`).
+
+---
 
 ## Features
-- **Moonrise, lunar transit, moonset**: times in the correct local timezone.
-- **Phase disc**: rendered canvas graphic showing the exact illuminated face.
-- **Moon distance**: kilometres from Earth at the selected date.
-- **Next new and full moon**: upcoming lunation dates calculated client-side.
-- **City search**: offline autocomplete for 2,000+ cities worldwide.
-- **Device geolocation**: one-click GPS coordinates from your device.
-- **Manual GPS input**: any arbitrary latitude or longitude on Earth.
-- **Time travel**: calculate lunar data for any past or future date.
-- **Polar edge cases**: "Always Up" or "Always Down" handling for high-Arctic locations.
 
-## Architecture
-- **Vanilla HTML/CSS/JS**, no frameworks, no build step.
-- **Privacy first**, no cookies, no tracking. Only one anonymous external call (Open-Meteo) to resolve raw GPS coordinates to an IANA timezone. City lookups use a bundled database.
-- Dark-mode glassmorphism Stormberry design system, lunar silver and indigo palette, animated moon disc in the header, fully responsive on mobile and desktop.
-- **Sovereign AI**, built and maintained using high-speed agentic workflows.
+### Web Application (`index.html`)
+* **Moonrise, Lunar Transit, Moonset:** Computed offline in the correct local timezone.
+* **Phase Disc:** Rendered canvas graphic showing the exact illuminated lunar face.
+* **Moon Distance:** Kilometres from Earth at the selected date.
+* **Lunation Calculator:** Next new moon and full moon dates calculated client-side.
+* **Offline City Search:** Autocomplete for global cities.
 
-## Stack
-| Dependency | Purpose |
+### Android APK Specific (`moonapp.apk`)
+* **Lunar Alarm Engine:** Wake up or receive alerts based on celestial lunar movements:
+  * **Moonrise Alarms:** Set alerts relative to moonrise (e.g. 15 minutes before moonrise).
+  * **Moonset Alarms:** Alerts relative to moonset.
+  * **Lunar Meridian Transit / Peak Alarms:** Trigger when the moon reaches its highest point.
+  * **Full Moon & New Moon Night Alarms:** Automatic alerts on lunation nights.
+* **Daily Auto-Recompute:** Recalculates exact alarm trigger timestamps every day as the moon's schedule shifts (~50 mins per day).
+* **System Event Recovery:** Automatically re-arms alarms on device reboot (`BOOT_COMPLETED`), timezone change, or clock adjustment.
+
+---
+
+## Android Permission Inventory
+
+| Permission | Purpose |
 |---|---|
-| [SunCalc 1.8.0](https://github.com/mourner/suncalc) | Astronomical moon calculations, bundled locally |
-| Browser [`Intl` API](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl) | Timezone-aware time formatting, built into the browser |
-| [Open-Meteo](https://open-meteo.com) | Timezone resolution for raw GPS coordinates only |
-| [Inter](https://rsms.me/inter/) | Typography, locally hosted |
+| `USE_EXACT_ALARM` | Fires exact alarms at scheduled minute on Android 13+ |
+| `SCHEDULE_EXACT_ALARM` | Supports exact alarm scheduling on Android 12 (API 31–32) |
+| `POST_NOTIFICATIONS` | Displays alarm notifications on Android 13+ |
+| `RECEIVE_BOOT_COMPLETED` | Re-arms lunar alarms after device reboot |
+| `WAKE_LOCK` | Holds CPU awake briefly during alarm fire transition |
+| `VIBRATE` | Haptic feedback during alarm ringing |
+| `USE_FULL_SCREEN_INTENT` | Displays full-screen ring activity over lock screen |
+| `FOREGROUND_SERVICE` | Keeps alarm audio service running without OS termination |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Android 14+ media playback foreground service type |
+
+> **Sovereign Privacy Guarantee:** `INTERNET`, `ACCESS_FINE_LOCATION`, and `ACCESS_COARSE_LOCATION` are explicitly removed from `moonapp.apk`.
+
+---
+
+## Architecture & Stack
+
+* **Web Front-End:** Vanilla HTML, CSS, JS with zero build step.
+* **Android Native App:** Kotlin with Jetpack Compose UI and native `AlarmManager` integration.
+* **Calculation Engine:** Astronomical moon algorithms following the published SunCalc 1.8.0
+  formulae. The web app uses SunCalc 1.8.0 itself (`suncalc.js`); the Android app carries an
+  independent Kotlin implementation of the same formulae in `lunar/MoonCalc.kt`. They are not
+  yet parity-tested against each other: a golden-vector test in the shape of SunApp's
+  `SunCalcGoldenTest` is still to be written, and the claim of parity should not be made until
+  it exists.
+
+---
 
 ## Credits
 Built by [Stormberry AS](https://stormberry.as). Proudly powered by sovereign AI agents.
 
 ## Disclaimer
-
-Supplied free of charge, **as is**, with no warranty of any kind. Using it creates no client or advisory relationship with Stormberry AS, and nothing it produces is professional advice.
-
-
-This is a **functioning prototype**, not a certified instrument and not a professional service. Values are computed or modelled, not measured. Check anything that matters against an authoritative source before you act on it. Stormberry AS reimburses no cost or loss arising from use of this application.
-
-Full terms: [DISCLAIMER.md](DISCLAIMER.md).
+Supplied free of charge, **as is**, with no warranty of any kind. Full terms in [DISCLAIMER.md](DISCLAIMER.md).

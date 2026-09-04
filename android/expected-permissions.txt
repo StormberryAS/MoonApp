@@ -1,0 +1,18 @@
+# The exact permission set the release APK must declare, verified against the MERGED
+# manifest rather than the source one. Regenerate with:
+#   aapt2 dump permissions app/build/outputs/apk/release/*.apk | grep uses-permission
+#
+# FOREGROUND_SERVICE_SPECIAL_USE replaced FOREGROUND_SERVICE_MEDIA_PLAYBACK on 2026-09-04:
+# an alarm is not media playback, and mediaPlayback invites a Play review rejection.
+# DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION is injected by androidx.core, is signature-level
+# and app-private. It is expected; it is listed so a diff against the APK comes back clean.
+android.permission.FOREGROUND_SERVICE
+android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED
+android.permission.POST_NOTIFICATIONS
+android.permission.RECEIVE_BOOT_COMPLETED
+android.permission.SCHEDULE_EXACT_ALARM
+android.permission.USE_EXACT_ALARM
+android.permission.USE_FULL_SCREEN_INTENT
+android.permission.VIBRATE
+android.permission.WAKE_LOCK
+no.stormberry.moonapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION

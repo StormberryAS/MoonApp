@@ -1,0 +1,24 @@
+MoonApp calculates moonrise, lunar transit and moonset for any location on Earth,
+handles the timezone properly, and says plainly when the moon does not rise or set
+at all on a given day, which at Norwegian latitudes happens regularly.
+
+It also reports the current phase, the illuminated fraction and the distance to the
+moon, and the dates of the next new and full moon.
+
+It can wake you by the moon rather than by the clock. Set an alarm for moonrise, for
+moonset, or for a fixed offset either side of one, and it recomputes as the lunar
+cycle moves rather than firing at a time you had to work out yourself.
+
+It never touches the network. There is no INTERNET permission, so it cannot, and the
+astronomical calculation is entirely local. Locations come from a bundled catalogue
+of 25,007 cities, the same catalogue the website uses, or from coordinates you type
+in yourself. Nothing you enter leaves the device: there is no account, no analytics,
+no advertising identifier and no telemetry of any kind.
+
+MoonApp is a functioning prototype, published to show what Stormberry AS builds. It
+is not a certified instrument, not a professional service, and not a substitute for
+an authoritative source. Check anything that matters against an authoritative source
+before you act on it.
+
+The web version is at https://moon.stormberry.as and the source is at
+https://github.com/StormberryAS/MoonApp under the MIT licence.

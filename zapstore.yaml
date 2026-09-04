@@ -1,0 +1,37 @@
+# Zapstore publishing manifest (https://zapstore.dev/docs/publish).
+#
+# `pubkey` is load-bearing: on first publish the Zapstore relay fetches this file
+# from the repository and whitelists the key found here. It must stay identical to
+# the key `zsp` signs with (SIGN_WITH). It is the Stormberry AS Nostr identity.
+#
+# Sovereign package: no.stormberry.moonapp
+# Play Store package: no.stormberry.moonapp.play
+
+repository: https://github.com/StormberryAS/MoonApp
+pubkey: npub1zz9w77p2jkn95t0st9tcuea8zdn2vknf0ctrwyd4g46w3kswdccqesr0pa
+
+name: MoonApp
+summary: Moon phase, moonrise times and lunar calendar computed entirely offline
+description: |
+  MoonApp calculates moonrise, moonset, lunar phase, illumination percentage and distance
+  for any location on Earth, handling timezones natively and offline.
+
+  It never touches the network for astronomical calculations. There is no mandatory internet
+  permission required for lunar tracking, and coordinates come from a bundled catalogue of global
+  cities or manual latitude/longitude inputs.
+
+tags:
+  - privacy
+  - utilities
+  - offline
+  - astronomy
+  - moon
+  - calendar
+
+license: MIT
+website: https://moon.stormberry.as
+
+# Store icon and screenshot definitions
+icon: ./fastlane/metadata/android/en-US/images/icon.png
+
+match: "MoonApp-.*\\.apk$"

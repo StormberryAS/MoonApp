@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      MOONAPP ALARM PERMISSION INVENTORY:
+      Every permission below is dedicated to enabling exact offline astronomical lunar alarms:
+
+      1. USE_EXACT_ALARM: Fires lunar alarms precisely at the scheduled minute on Android 13+.
+      2. SCHEDULE_EXACT_ALARM: Supports exact alarm scheduling on Android 12 (API 31-32).
+      3. POST_NOTIFICATIONS: Displays alarm ringing & status notifications on Android 13+.
+      4. RECEIVE_BOOT_COMPLETED: Re-calculates and re-arms lunar alarms after device reboot.
+      5. WAKE_LOCK: Keeps CPU awake during alarm fire transition.
+      6. VIBRATE: Haptic feedback during alarm ringing.
+      7. USE_FULL_SCREEN_INTENT: Displays full-screen alarm ring activity over lock screen.
+      8. FOREGROUND_SERVICE: Prevents Android OS from killing active ringing audio service.
+      9. FOREGROUND_SERVICE_SYSTEM_EXEMPTED: an alarm is not media playback. systemExempted is the
+         type an alarm clock declares on Android 14+; mediaPlayback invites a Play review rejection.
+    -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
+
+    <!--
+      SOVEREIGN PRIVACY PROTECTION:
+      Explicitly remove internet and network/location permissions to guarantee 100% offline calculations.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove" />
+
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MoonApp">
+
+        <!-- Main Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|density|fontScale"
+            android:theme="@style/Theme.MoonApp">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- System Alarm Intent Trampoline -->
+        <activity
+            android:name=".alarm.AlarmIntentActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SET_ALARM" />
+                <action android:name="android.intent.action.SHOW_ALARMS" />
+                <action android:name="android.intent.action.DISMISS_ALARM" />
+                <action android:name="android.intent.action.SNOOZE_ALARM" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Full-screen Ring Activity (Ringing screen over lock screen) -->
+        <activity
+            android:name=".alarm.RingActivity"
+            android:exported="false"
+            android:directBootAware="true"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.MoonApp"
+            tools:targetApi="27" />
+
+        <!-- Foreground Ringing Media Service -->
+        <service
+            android:name=".alarm.AlarmService"
+            android:exported="false"
+            android:directBootAware="true"
+            android:foregroundServiceType="systemExempted" />
+
+        <!-- Alarm Fire Receiver -->
+        <receiver
+            android:name=".alarm.AlarmFireReceiver"
+            android:exported="false"
+            android:directBootAware="true" />
+
+        <!-- System Event Receiver (Re-computes alarms on reboot, timezone, or clock changes) -->
+        <receiver
+            android:name=".alarm.SystemEventReceiver"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
