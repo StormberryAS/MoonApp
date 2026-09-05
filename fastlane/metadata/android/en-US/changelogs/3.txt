@@ -1,0 +1,8 @@
+1.0.2 adds the terms to the footer.
+
+- Privacy and Disclaimer are now links in the footer, so the terms are reachable from
+  inside the app rather than only from the website.
+- The Stormberry logo in the footer opens stormberry.as.
+
+Opening any of those hands the address to your browser. MoonApp still has no INTERNET
+permission and still cannot reach the network itself.

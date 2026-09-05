@@ -1,6 +1,8 @@
 package no.stormberry.moonapp.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +20,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import no.stormberry.moonapp.R
@@ -66,9 +71,25 @@ fun AppHeader(modifier: Modifier = Modifier) {
     }
 }
 
-/** Footer: what the app does not do, and who made it. */
+/**
+ * Footer: what the app does not do, who made it, and where to read the terms.
+ *
+ * ### Opening a link from an app with no INTERNET permission
+ *
+ * The manifest does not merely omit INTERNET, it removes it:
+ *
+ *     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+ *
+ * so this process cannot open a socket. That is not in tension with the links below.
+ * [LocalUriHandler] fires an ACTION_VIEW intent and the BROWSER does the fetching, in its own
+ * process with its own permissions. Nothing here needs INTERNET and nothing here should ever
+ * be "fixed" by adding it: the whole privacy claim rests on that permission being absent, and
+ * `android/expected-permissions.txt` plus the CI diff against the built APK is what keeps the
+ * claim honest.
+ */
 @Composable
 fun AppFooter(modifier: Modifier = Modifier) {
+    val uriHandler = LocalUriHandler.current
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -83,19 +104,52 @@ fun AppFooter(modifier: Modifier = Modifier) {
             color = Moon.TextMuted,
             textAlign = TextAlign.Center,
         )
+
+        Spacer(Modifier.height(12.dp))
+
+        // The two documents a user is entitled to read before trusting an app. Underlined as
+        // well as coloured, because colour alone is not an accessible affordance for a link.
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FooterLink("Privacy") { uriHandler.openUri(PRIVACY_URL) }
+            Text("·", style = MaterialTheme.typography.bodySmall, color = Moon.TextMuted)
+            FooterLink("Disclaimer") { uriHandler.openUri(DISCLAIMER_URL) }
+        }
+
         Spacer(Modifier.height(16.dp))
+
         Image(
             painter = painterResource(R.drawable.ic_stormberry_logo),
-            // Decorative: the wordmark repeats the line above and nothing here is a link.
-            contentDescription = null,
+            // No longer decorative: it is now the link to stormberry.as, so it needs a name a
+            // screen reader can announce and a Role that says what activating it does.
+            contentDescription = "Stormberry AS website",
             // Full white would out-shout the app's own content this far down.
             alpha = 0.72f,
             // Height only: the drawable carries the lockup's proportions, so the width
             // follows from them and never has to be kept in sync.
-            modifier = Modifier.height(24.dp),
+            modifier = Modifier
+                .height(24.dp)
+                .clickable(role = Role.Button) { uriHandler.openUri(SITE_URL) },
         )
     }
 }
+
+@Composable
+private fun FooterLink(label: String, onClick: () -> Unit) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.bodySmall,
+        color = Moon.TextPrimary,
+        textDecoration = TextDecoration.Underline,
+        modifier = Modifier.clickable(role = Role.Button, onClick = onClick),
+    )
+}
+
+private const val SITE_URL = "https://stormberry.as"
+private const val PRIVACY_URL = "https://stormberry.as/privacy.html"
+private const val DISCLAIMER_URL = "https://moon.stormberry.as/disclaimer.html"
 
 /**
  * The web app's header glow and its cool lower wash, as two radial gradients.

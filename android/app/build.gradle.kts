@@ -66,12 +66,15 @@ android {
         // unreadable), no window insets, no alarms screen, and an alarm that rang until the
         // battery died. See fastlane changelogs/2.txt.
         //
-        // Play 1.1.0 (code 3): RESERVED, not yet released. Play comes second, and the rule
+        // Sovereign 1.0.2 (code 3): the footer. Privacy and Disclaimer links, and the
+        // Stormberry lockup made tappable, in step with the same change to SunApp.
+        //
+        // Play 1.1.0 (code 4): RESERVED, not yet released. Play comes second, and the rule
         // from UsernameGenerator holds here too: every Play upload must be built from a
         // sovereign tag that already shipped, same code, different application ID and
         // different signature. Never respin Play from an untagged tree.
-        versionCode = if (playBuild) 3 else 2
-        versionName = if (playBuild) "1.1.0" else "1.0.1"
+        versionCode = if (playBuild) 4 else 3
+        versionName = if (playBuild) "1.1.0" else "1.0.2"
 
         vectorDrawables.generatedDensities()
 
