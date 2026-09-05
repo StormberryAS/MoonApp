@@ -11,7 +11,9 @@ import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.Vibrator
 import androidx.core.app.NotificationCompat
 
@@ -26,11 +28,26 @@ class AlarmService : Service() {
 
     private var ringtone: Ringtone? = null
     private var vibrator: Vibrator? = null
+    private val handler = Handler(Looper.getMainLooper())
 
     companion object {
         private const val CHANNEL_ID = "moonapp_alarm_channel"
         private const val NOTIFICATION_ID = 8802
         const val ACTION_STOP_ALARM = "no.stormberry.moonapp.STOP_ALARM"
+
+        /**
+         * How long an unanswered alarm rings before it gives up.
+         *
+         * The upper bound is set by a phone in a bag on a train, where an alarm nobody can
+         * hear should eventually stop rather than flatten the battery. Ten minutes, matching
+         * SunApp. Before this existed the tone looped and the vibrator ran with repeat index
+         * 0 and there was no timer anywhere in the app, so a missed alarm rang until someone
+         * dismissed it or the battery died.
+         */
+        private const val AUTO_SILENCE_MS = 10L * 60L * 1000L
+
+        /** Ringtone.isLooping is API 28+; below that the tone is restarted on this period. */
+        private const val RELOOP_MS = 3000L
     }
 
     override fun onCreate() {
@@ -60,7 +77,16 @@ class AlarmService : Service() {
             startVibration()
         }
 
-        return START_STICKY
+        handler.removeCallbacksAndMessages(null)
+        handler.postDelayed({ stopSelf() }, AUTO_SILENCE_MS)
+
+        // START_NOT_STICKY, not START_STICKY. When Android reclaims the service under memory
+        // pressure or a vendor task killer takes it, START_STICKY restarts it with a NULL
+        // Intent: every getStringExtra falls back and the app rings again, at an arbitrary
+        // later time, with the generic text and no rule behind it. An alarm that re-rings by
+        // itself hours later is worse than one that does not ring at all. The alarm is
+        // re-armed from the stored rules by SystemEventReceiver, which is the correct path.
+        return START_NOT_STICKY
     }
 
     private fun playRingtone() {
@@ -78,6 +104,17 @@ class AlarmService : Service() {
             // arrived in API 28; below that the handler below restarts it.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 ringtone?.isLooping = true
+            } else {
+                // The comment above used to promise "the handler below restarts it" and there
+                // was no handler, so on API 24 to 27 the tone played once, a few seconds, and
+                // went silent while the vibration carried on. This is that handler.
+                handler.post(object : Runnable {
+                    override fun run() {
+                        val r = ringtone ?: return
+                        if (!r.isPlaying) r.play()
+                        handler.postDelayed(this, RELOOP_MS)
+                    }
+                })
             }
             ringtone?.play()
         } catch (e: Exception) {
@@ -134,7 +171,7 @@ class AlarmService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("$label ($eventName)")
             .setContentText("Location: $cityName. Tap to dismiss.")
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(no.stormberry.moonapp.R.drawable.ic_stat_moon)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setOngoing(true)
@@ -160,6 +197,9 @@ class AlarmService : Service() {
     }
 
     override fun onDestroy() {
+        // Before the ringtone, so the API 24-27 re-loop runnable cannot restart a tone that
+        // has just been stopped.
+        handler.removeCallbacksAndMessages(null)
         ringtone?.stop()
         vibrator?.cancel()
         super.onDestroy()

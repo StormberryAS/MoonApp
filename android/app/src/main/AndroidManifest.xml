@@ -64,14 +64,24 @@
         <activity
             android:name=".alarm.AlarmIntentActivity"
             android:exported="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
             android:noHistory="true">
+            <!--
+              SET_ALARM and SNOOZE_ALARM were advertised here and are gone deliberately.
+              MoonApp cannot honour either: its alarms are anchored to a lunar event, so
+              "set an alarm for 7" and "snooze 9 minutes" have no meaning it could implement.
+              Registering for an action and then dropping it is worse than not registering,
+              because the chooser offers MoonApp and the request silently disappears.
+
+              SHOW_ALARMS and DISMISS_ALARM stay because they ARE answerable, and
+              AlarmIntentActivity now answers them rather than forwarding everything to the
+              home screen and finishing.
+            -->
             <intent-filter>
-                <action android:name="android.intent.action.SET_ALARM" />
                 <action android:name="android.intent.action.SHOW_ALARMS" />
                 <action android:name="android.intent.action.DISMISS_ALARM" />
-                <action android:name="android.intent.action.SNOOZE_ALARM" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -82,6 +92,7 @@
             android:exported="false"
             android:directBootAware="true"
             android:launchMode="singleTask"
+            android:taskAffinity=""
             android:excludeFromRecents="true"
             android:showWhenLocked="true"
             android:turnScreenOn="true"

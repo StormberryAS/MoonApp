@@ -61,14 +61,17 @@ android {
         // Sovereign 1.0.0 (code 1): the first Zapstore release. Nothing has shipped yet, so
         // this is a clean start rather than a continuation.
         //
-        // Play 1.1.0 (code 2): RESERVED, not yet released. Play comes second, and the rule
+        // Sovereign 1.0.1 (code 2): the v1.0.0 UI repair. v1.0.0 shipped SunApp's launcher
+        // icon, no theme (so Material 3 resolved its baseline LIGHT palette and typed text was
+        // unreadable), no window insets, no alarms screen, and an alarm that rang until the
+        // battery died. See fastlane changelogs/2.txt.
+        //
+        // Play 1.1.0 (code 3): RESERVED, not yet released. Play comes second, and the rule
         // from UsernameGenerator holds here too: every Play upload must be built from a
         // sovereign tag that already shipped, same code, different application ID and
-        // different signature. Never respin Play from an untagged tree. Confirm these two
-        // numbers at Play launch rather than assuming them, because the sovereign line may
-        // have advanced past 1.0.0 by then.
-        versionCode = if (playBuild) 2 else 1
-        versionName = if (playBuild) "1.1.0" else "1.0.0"
+        // different signature. Never respin Play from an untagged tree.
+        versionCode = if (playBuild) 3 else 2
+        versionName = if (playBuild) "1.1.0" else "1.0.1"
 
         vectorDrawables.generatedDensities()
 
@@ -115,6 +118,16 @@ android {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    dependenciesInfo {
+        // Strips the Google-signed dependency blob from the APK. It is encrypted, it is not
+        // reproducible, and it was the one thing in the APK that stopped anyone rebuilding
+        // from the android-v1.0.0 tag matching the SHA-256 the release workflow publishes
+        // beside it. For an app whose whole claim is "nothing leaves the device", an opaque
+        // metadata block is also the wrong look. SunApp has carried this since 2026-08-21.
+        includeInApk = false
+        includeInBundle = false
     }
 
     lint {

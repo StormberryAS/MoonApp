@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Status-bar icon for a ringing lunar alarm.
+
+  A notification small icon is drawn as a silhouette: the system keeps the alpha channel and
+  discards the colours, so this is a single white crescent and nothing else. It replaces
+  android.R.drawable.ic_lock_idle_alarm, the platform's stock alarm bitmap, which made a
+  MoonApp alarm indistinguishable in the shade from any other app's and is the wrong mark for
+  a lunar alarm besides.
+
+  Same construction as ic_launcher_monochrome.xml, at 24dp:
+      disc     centre (12, 12)  r  9
+      shadow   centre (15, 12)  rx 7.6  ry 9
+  intersecting at (13.6265, 3.148) and (13.6265, 20.852).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M13.6265,3.148 A9,9 0 1 0 13.6265,20.852 A7.6,9 0 0 1 13.6265,3.148 Z" />
+</vector>

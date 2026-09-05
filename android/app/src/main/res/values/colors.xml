@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Both values are the web app's base background from style.css (#050810), the same convention
+  SunApp follows (its base is #080c18 and both entries below are #080C18). They were #0F172A,
+  which is in neither MoonApp's palette nor SunApp's: it is the scaffold's Tailwind slate 900
+  default, never updated after the port. That mattered twice. The launch window flashed a
+  colour the app never uses, and it inverted the icon: favicon.svg lays a #090d1e shadow over
+  the disc expecting the base to be darker, so the dark limb reads as earthshine; against
+  #0F172A the limb came out darker than its background instead.
+-->
 <resources>
-    <color name="stormberry_background">#0F172A</color>
-    <color name="stormberry_icon_background">#0F172A</color>
+    <color name="stormberry_background">#050810</color>
+    <color name="stormberry_icon_background">#050810</color>
 </resources>

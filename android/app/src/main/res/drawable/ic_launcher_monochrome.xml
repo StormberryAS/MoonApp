@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Themed-icon (monochrome) layer for MoonApp.
+
+  Android tints this drawable a single colour, so the foreground's translucent
+  shadow ellipse cannot be reused: it would be painted the same shade as the disc
+  and the crescent would disappear. Here the crescent is one filled path, the
+  disc minus the shadow ellipse, so it survives any tint.
+
+  Same geometry as ic_launcher_foreground.xml:
+      disc     centre (54, 54)  r  26
+      shadow   centre (62, 54)  rx 22  ry 26
+  which intersect at (58.3334, 28.364) and (58.3334, 79.636).
+
+  No android:tint here. The system applies the themed-icon tint itself, and
+  ?attr/colorControlNormal is an AppCompat attribute this app does not pull in
+  (the theme parent is android:Theme.Material.NoActionBar), so referencing it
+  fails resource linking with "resource attr/colorControlNormal not found".
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58.3334,28.364 A26,26 0 1 0 58.3334,79.636 A22,26 0 0 1 58.3334,28.364 Z" />
+</vector>

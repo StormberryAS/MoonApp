@@ -4,6 +4,12 @@
 # from the repository and whitelists the key found here. It must stay identical to
 # the key `zsp` signs with (SIGN_WITH). It is the Stormberry AS Nostr identity.
 #
+# PUBLISH WITH THE CONFIG FILE, NOT -r:
+#     SIGN_WITH=<nsec|bunker://...> zsp publish zapstore.yaml
+# `zsp publish -r github.com/...` is a SOURCE flag and never reads this file, so
+# tags, license and website are silently dropped from the kind 32267 app event.
+# That is what happened on the v1.0.0 publish (2026-09-05).
+#
 # Sovereign package: no.stormberry.moonapp
 # Play Store package: no.stormberry.moonapp.play
 
@@ -11,20 +17,39 @@ repository: https://github.com/StormberryAS/MoonApp
 pubkey: npub1zz9w77p2jkn95t0st9tcuea8zdn2vknf0ctrwyd4g46w3kswdccqesr0pa
 
 name: MoonApp
-summary: Moon phase, moonrise times and lunar calendar computed entirely offline
+summary: Moon phase, moonrise times and lunar alarms, computed offline
 description: |
-  MoonApp calculates moonrise, moonset, lunar phase, illumination percentage and distance
-  for any location on Earth, handling timezones natively and offline.
+  MoonApp calculates moonrise, lunar transit and moonset for any location on Earth,
+  handles the timezone properly, and says plainly when the moon does not rise or set
+  at all on a given day, which at Norwegian latitudes happens regularly.
 
-  It never touches the network for astronomical calculations. There is no mandatory internet
-  permission required for lunar tracking, and coordinates come from a bundled catalogue of global
-  cities or manual latitude/longitude inputs.
+  It also reports the current phase, the illuminated fraction and the distance to the
+  moon, and the dates of the next new and full moon.
+
+  It can wake you by the moon rather than by the clock. Set an alarm for moonrise, for
+  moonset, or for a fixed offset either side of one, and it recomputes as the lunar
+  cycle moves rather than firing at a time you had to work out yourself.
+
+  It never touches the network. There is no INTERNET permission, so it cannot, and the
+  astronomical calculation is entirely local. Locations come from a bundled catalogue
+  of 25,007 cities, the same catalogue the website uses, or from coordinates you type
+  in yourself. Nothing you enter leaves the device: there is no account, no analytics,
+  no advertising identifier and no telemetry of any kind.
+
+  MoonApp is a functioning prototype, published to show what Stormberry AS builds. It
+  is not a certified instrument, not a professional service, and not a substitute for
+  an authoritative source. Check anything that matters against an authoritative source
+  before you act on it.
+
+  The web version is at https://moon.stormberry.as and the source is at
+  https://github.com/StormberryAS/MoonApp under the MIT licence.
 
 tags:
   - privacy
   - utilities
   - offline
   - astronomy
+  - alarm
   - moon
   - calendar
 
@@ -33,5 +58,11 @@ website: https://moon.stormberry.as
 
 # Store icon and screenshot definitions
 icon: ./fastlane/metadata/android/en-US/images/icon.png
+
+# Zapstore reads only phoneScreenshots; the sevenInch/tenInch pairs beside them
+# are Play Store assets and are deliberately not listed here.
+images:
+  - ./fastlane/metadata/android/en-US/images/phoneScreenshots/01-times_phone.png
+  - ./fastlane/metadata/android/en-US/images/phoneScreenshots/02-alarms_phone.png
 
 match: "MoonApp-.*\\.apk$"

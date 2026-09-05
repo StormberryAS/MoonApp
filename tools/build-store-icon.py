@@ -20,10 +20,14 @@ the size both stores expect.
 
 The composition deliberately mirrors the adaptive icon rather than just scaling
 favicon.svg to fill the square: same background colour, same inset, so the store
-tile and the launcher icon are the same image.
+tile and the launcher icon are the same image. The background is READ FROM
+colors.xml rather than hard-coded, because it was hard-coded once and silently
+kept SunApp's #080C18 after MoonApp's own colour changed to #0F172A, which is the
+drift this docstring claims cannot happen.
 """
 import io
 import os
+import re
 
 import cairosvg
 from PIL import Image
@@ -33,12 +37,22 @@ SVG = os.path.join(HERE, "favicon.svg")
 OUT = os.path.join(HERE, "fastlane", "metadata", "android", "en-US", "images", "icon.png")
 
 SIZE = 512
-# The adaptive foreground draws the sun across roughly 64 of a 108 viewport (rays
-# reach r=32 from centre), so it occupies about 59% of the tile. Matching that
-# keeps the store tile and the launcher icon identical instead of merely similar.
+# ic_launcher_foreground.xml maps favicon.svg's 64x64 canvas onto 64 of the 108
+# adaptive-icon viewport at offset 22, so the mark covers 64/108 of the tile.
+# Matching that keeps the store tile and the launcher icon identical rather than
+# merely similar.
 MARK_FRACTION = 64 / 108
-# res/values/colors.xml -> stormberry_icon_background (MoonApp: #080C18)
-BACKGROUND = (0x08, 0x0C, 0x18, 0xFF)
+COLORS = os.path.join(HERE, "android", "app", "src", "main", "res", "values", "colors.xml")
+
+
+def background():
+    """res/values/colors.xml -> stormberry_icon_background, as RGBA."""
+    xml = open(COLORS, encoding="utf-8").read()
+    m = re.search(r'name="stormberry_icon_background">\s*#([0-9A-Fa-f]{6})', xml)
+    if not m:
+        raise SystemExit(f"stormberry_icon_background not found in {COLORS}")
+    h = m.group(1)
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 0xFF)
 
 
 def main():
@@ -46,7 +60,7 @@ def main():
     png = cairosvg.svg2png(url=SVG, output_width=mark_px, output_height=mark_px)
     mark = Image.open(io.BytesIO(png)).convert("RGBA")
 
-    canvas = Image.new("RGBA", (SIZE, SIZE), BACKGROUND)
+    canvas = Image.new("RGBA", (SIZE, SIZE), background())
     offset = ((SIZE - mark_px) // 2, (SIZE - mark_px) // 2)
     canvas.alpha_composite(mark, offset)
 

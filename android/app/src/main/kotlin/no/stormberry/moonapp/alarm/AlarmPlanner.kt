@@ -63,10 +63,21 @@ object AlarmPlanner {
             Intent(context, no.stormberry.moonapp.MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        alarmManager.setAlarmClock(
-            AlarmManager.AlarmClockInfo(triggerAtMillis, show),
-            pendingIntent
-        )
+        // Guarded. On Android 12/12L the user can revoke SCHEDULE_EXACT_ALARM in Settings and
+        // this throws SecurityException; some vendor ROMs also throw on a pending-alarm limit.
+        // Unguarded, that exception propagated out of SystemEventReceiver.onReceive during the
+        // post-boot re-arm, so one refusing rule abandoned every rule after it in the loop.
+        // One alarm failing must not take the others with it.
+        try {
+            alarmManager.setAlarmClock(
+                AlarmManager.AlarmClockInfo(triggerAtMillis, show),
+                pendingIntent
+            )
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+        } catch (e: IllegalStateException) {
+            e.printStackTrace()
+        }
     }
 
     /**

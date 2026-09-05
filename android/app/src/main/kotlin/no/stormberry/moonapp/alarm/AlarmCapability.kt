@@ -43,13 +43,23 @@ object AlarmCapability {
         )
     }
 
+    /**
+     * commit(), not apply(), here and in [saveRule] and [deleteRule].
+     *
+     * apply() hands the write to a background thread and returns. That is the right default
+     * for a preference nobody would miss, and the wrong one for alarm rules: a process death
+     * between the return and the flush loses the alarm silently, and the user finds out by not
+     * being woken. Observed on 2026-09-05 when an `am force-stop` straight after a save left
+     * no moonapp_alarms.xml on disk at all. These writes are user-initiated, infrequent, and
+     * a few milliseconds of blocking on a file this small is not a cost worth trading for.
+     */
     fun saveLocation(context: Context, city: String, lat: Double, lon: Double, tz: String?) {
         getPrefs(context).edit()
             .putString(KEY_TZ, tz)
             .putString(KEY_CITY, city)
             .putLong(KEY_LAT, java.lang.Double.doubleToRawLongBits(lat))
             .putLong(KEY_LON, java.lang.Double.doubleToRawLongBits(lon))
-            .apply()
+            .commit()
     }
 
     private fun unesc(s: String) = s.replace("\\p", "|").replace("\\\\", "\\")
@@ -78,7 +88,7 @@ object AlarmCapability {
         val prefs = getPrefs(context)
         val serialized = "${rule.id}|${esc(rule.label)}|${rule.event.name}|${rule.offsetMinutes}|" +
             "${esc(rule.cityName)}|${rule.latDeg}|${rule.lonDeg}|${rule.enabled}|${rule.vibrate}"
-        prefs.edit().putString(KEY_RULE_PREFIX + rule.id, serialized).apply()
+        prefs.edit().putString(KEY_RULE_PREFIX + rule.id, serialized).commit()
 
         if (rule.enabled) {
             AlarmPlanner.scheduleAlarm(context, rule)
@@ -124,7 +134,7 @@ object AlarmCapability {
      */
     fun deleteRule(context: Context, ruleId: String) {
         val prefs = getPrefs(context)
-        prefs.edit().remove(KEY_RULE_PREFIX + ruleId).apply()
+        prefs.edit().remove(KEY_RULE_PREFIX + ruleId).commit()
         AlarmPlanner.cancelAlarm(context, ruleId)
     }
 

@@ -1,0 +1,29 @@
+1.0.1 repairs the first release. Testing v1.0.0 on a phone found the app was wearing
+SunApp's icon and had no theme of its own.
+
+Fixed
+- The launcher icon was SunApp's sun, byte for byte. It is now MoonApp's crescent, drawn
+  from the same favicon the website uses, with a themed-icon layer that survives tinting.
+- Typed text was unreadable. The app declared no colour scheme, so Material fell back to
+  its light palette and painted near-black text on the dark cards, including the city
+  search and both coordinate fields.
+- The header ran underneath the status bar and the last alarm's switch sat in the
+  home-gesture strip. The app now applies system-bar insets.
+- Alarms have their own screen. You can choose any of the five lunar events, set the
+  offset, name an alarm, edit it and delete it. Before, one button made a fixed
+  "15 minutes before moonrise" alarm that could never be changed or removed.
+- An unanswered alarm rang and vibrated until the battery died. It now stops after ten
+  minutes, keeps the screen on while it rings, and ignores the back gesture so the
+  dismiss button cannot be swiped away.
+- Typed coordinates took the phone's timezone instead of the place's, so Sydney's
+  coordinates on a Norwegian phone showed Oslo times.
+- Moon times are now computed over the place's own day rather than the UTC day, which
+  moved rise and set for everywhere east or west of Greenwich.
+
+Added
+- Pick any date, not only today.
+- Phase name, distance to the moon, and the dates of the next new and full moon.
+- Days when the moon stays up or never rises are now told apart, instead of both
+  reading "does not occur today".
+- A first-run notice saying plainly that this is a prototype, that the figures are
+  computed rather than observed, and that an Android alarm is best effort.

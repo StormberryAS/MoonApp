@@ -163,10 +163,15 @@ object MoonCalc {
      * +89 across 2026 found 12,217 days carrying suncalc's flag and 1,485 of them, 12.2 per
      * cent, labelled the wrong way round, worst at Tromso and Longyearbyen.
      */
-    fun dayKind(date: LocalDate, latDeg: Double, lonDeg: Double): LunarDayKind {
-        val t = times(date, latDeg, lonDeg)
+    fun dayKind(
+        date: LocalDate,
+        latDeg: Double,
+        lonDeg: Double,
+        zone: java.time.ZoneId = ZoneOffset.UTC,
+    ): LunarDayKind {
+        val t = times(date, latDeg, lonDeg, zone)
         if (t[LunarEvent.MOONRISE] != null || t[LunarEvent.MOONSET] != null) return LunarDayKind.NORMAL
-        val startOfDay = date.atStartOfDay(ZoneOffset.UTC).toInstant()
+        val startOfDay = date.atStartOfDay(zone).toInstant()
         var peak = -Double.MAX_VALUE
         for (i in 0..96) {
             val a = position(startOfDay.plusSeconds(i * 900L), latDeg, lonDeg).altitudeRad
@@ -175,8 +180,26 @@ object MoonCalc {
         return if (peak > 0.0) LunarDayKind.ALWAYS_UP else LunarDayKind.ALWAYS_DOWN
     }
 
-    fun times(date: LocalDate, latDeg: Double, lonDeg: Double): Map<LunarEvent, Instant?> {
-        val startOfDay = date.atStartOfDay(ZoneOffset.UTC).toInstant()
+    /**
+     * Rise, transit and set for [date] at a place.
+     *
+     * [zone] is the day boundary, and it is load-bearing for agreeing with the website.
+     * app.js:327 starts its search at the CITY'S local midnight converted to UTC
+     * (`Date.UTC(y, m, d) - tzOffsetMs`), not at UTC midnight, so for anywhere with a non-zero
+     * offset the two surfaces were searching different 24-hour windows and returned different
+     * answers for the same calendar date: over an hour apart at Bergen, and a full day apart on
+     * moonset at Sydney. The default stays UTC because `tools/gen-moontimes-golden.mjs` pins
+     * the algorithm against suncalc.js in UTC mode, and because OccurrenceEngine scans a
+     * contiguous span of days where the boundary only decides which day an event is filed
+     * under, never whether it is found. Anything the USER reads must pass the place's zone.
+     */
+    fun times(
+        date: LocalDate,
+        latDeg: Double,
+        lonDeg: Double,
+        zone: java.time.ZoneId = ZoneOffset.UTC,
+    ): Map<LunarEvent, Instant?> {
+        val startOfDay = date.atStartOfDay(zone).toInstant()
 
         // HOURLY SEARCH WITH QUADRATIC INTERPOLATION, ported from SunCalc's getMoonTimes,
         // which is what the website runs. The previous implementation stepped in 20-minute

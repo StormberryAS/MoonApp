@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -48,10 +49,24 @@ class RingActivity : ComponentActivity() {
             @Suppress("DEPRECATION")
             window.addFlags(
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             )
         }
+
+        // KEEP_SCREEN_ON on EVERY api level, not only below 27. setShowWhenLocked and
+        // setTurnScreenOn turn the display on; neither keeps it on. On any modern phone the
+        // screen therefore timed out after the usual 15 to 30 seconds while the alarm went on
+        // ringing, leaving a half-awake user tapping a black screen with no Dismiss button.
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Back must not remove the only screen that can stop the alarm. Without this, a
+        // reflexive back swipe on a ringing phone dismissed the UI and left the tone and the
+        // vibration running with the notification's Dismiss action as the only way out.
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Deliberately nothing. Dismiss is the way out of this screen.
+            }
+        })
 
         val label = intent.getStringExtra("RULE_LABEL") ?: "Lunar Alarm"
         val eventName = intent.getStringExtra("EVENT_NAME") ?: "Moon Event"
