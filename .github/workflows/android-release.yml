@@ -106,7 +106,7 @@ jobs:
           # INSTALL_FAILED_UPDATE_INCOMPATIBLE and the only fix is uninstalling.
           # This is the one mistake in the pipeline that cannot be undone, so the
           # expected fingerprint is asserted rather than eyeballed in a log.
-          EXPECTED_CERT=f968ba08240a5781d35e36db2b1d51c153ba28123eb54c16b50f282dc8d5af4c
+          EXPECTED_CERT=e7a95090da99dbe29e719ee2ef4233f3f0fb83ca7317ddba59863fe2b7895817
           ACTUAL_CERT=$("$BUILD_TOOLS/apksigner" verify --print-certs "$APK" \
             | grep -i 'certificate SHA-256 digest' | head -1 | awk '{print $NF}')
           if [ "$ACTUAL_CERT" != "$EXPECTED_CERT" ]; then
