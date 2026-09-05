@@ -325,7 +325,18 @@ async function onCalculate() {
      expressed as an instant, so the answer matches the label. Fixed 2026-09-04. */
   const tzOffsetMs = cityUtcOffsetMs(tz, dateForCalc);
   const cityMidnightUtc = new Date(Date.UTC(year, month - 1, day) - tzOffsetMs);
-  const moonTimes    = SunCalc.getMoonTimes(cityMidnightUtc, lat, lon, true);
+  /* NOT SunCalc.getMoonTimes. The 2026-09-04 fix above anchored the window on the city's
+     local midnight and then handed that instant to getMoonTimes, which opens with
+
+         var a = new Date(n); r ? a.setUTCHours(0,0,0,0) : a.setHours(0,0,0,0);
+
+     and so FLOORS it back to UTC midnight. East of Greenwich the city's local midnight falls
+     on the previous UTC day, so this page reported the PREVIOUS DAY'S moonrise and moonset
+     under the selected date's label: Oslo on 2026-01-15 showed the 14th. The Android app was
+     the one that was right. moonTimesFrom is getMoonTimes' own hourly search with the
+     truncation removed, so the window really does start where it is told to. Fixed
+     2026-09-05. */
+  const moonTimes    = moonTimesFrom(cityMidnightUtc, lat, lon);
   const moonriseValid = moonTimes.rise instanceof Date && !isNaN(moonTimes.rise);
   const moonsetValid  = moonTimes.set  instanceof Date && !isNaN(moonTimes.set);
   /* DO NOT TRUST suncalc's alwaysUp/alwaysDown flags. Its sign test reads a parabola
@@ -349,7 +360,7 @@ async function onCalculate() {
   const moonsetStr    = moonsetValid  ? formatTime(moonTimes.set,  tz) : null;
 
   /* Lunar transit (highest point in sky) */
-  const transitStr = findLunarTransit(dateForCalc, lat, lon, tz);
+  const transitStr = findLunarTransit(cityMidnightUtc, lat, lon, tz);
 
   /* Phase + illumination */
   const illum      = SunCalc.getMoonIllumination(dateForCalc);
@@ -483,14 +494,58 @@ function getNextLunations(fromDate) {
 }
 
 /**
+ * SunCalc.getMoonTimes with its day truncation removed.
+ *
+ * getMoonTimes begins `r ? a.setUTCHours(0,0,0,0) : a.setHours(0,0,0,0)`, which throws away
+ * the time-of-day of the instant it is given. That makes it impossible to search a window
+ * starting at a city's local midnight, which is exactly what this page needs. Everything
+ * below is its own hourly search with quadratic interpolation and its 0.133 rad horizon
+ * offset, lifted unchanged except that the window starts at `start`.
+ *
+ * Kept in step with MoonCalc.times on the Android side and with
+ * tools/gen-webparity-golden.mjs, which generates the corpus the Kotlin is tested against.
+ */
+function moonTimesFrom(start, lat, lon) {
+  const hoursLater = (d, h) => new Date(d.valueOf() + h * 3600000);
+  const H0 = 0.133 * Math.PI / 180;
+  const alt = h => SunCalc.getMoonPosition(hoursLater(start, h), lat, lon).altitude - H0;
+
+  let h0 = alt(0), rise, set, ye;
+  for (let i = 1; i <= 24; i += 2) {
+    const h1 = alt(i), h2 = alt(i + 1);
+    const a = (h0 + h2) / 2 - h1;
+    const b = (h2 - h0) / 2;
+    const xe = -b / (2 * a);
+    ye = (a * xe + b) * xe + h1;
+    const d = b * b - 4 * a * h1;
+    let roots = 0, x1, x2;
+    if (d >= 0) {
+      const dx = Math.sqrt(d) / (Math.abs(a) * 2);
+      x1 = xe - dx; x2 = xe + dx;
+      if (Math.abs(x1) <= 1) roots++;
+      if (Math.abs(x2) <= 1) roots++;
+      if (x1 < -1) x1 = x2;
+    }
+    if (roots === 1) { if (h0 < 0) rise = i + x1; else set = i + x1; }
+    else if (roots === 2) { rise = i + (ye < 0 ? x2 : x1); set = i + (ye < 0 ? x1 : x2); }
+    if (rise && set) break;
+    h0 = h2;
+  }
+  const out = {};
+  if (rise) out.rise = hoursLater(start, rise);
+  if (set) out.set = hoursLater(start, set);
+  return out;
+}
+
+/**
  * Finds the Lunar Transit time (highest altitude) by sampling every 15 minutes.
  * Returns a formatted time string in the target timezone, or null if below horizon.
  */
-function findLunarTransit(dateForCalc, lat, lon, tz) {
-  const dayStart = new Date(Date.UTC(
-    dateForCalc.getUTCFullYear(), dateForCalc.getUTCMonth(), dateForCalc.getUTCDate(),
-    0, 0, 0
-  ));
+function findLunarTransit(dayStart, lat, lon, tz) {
+  /* dayStart is the CITY'S local midnight as an instant, the same window the rise and set
+     search uses. It used to rebuild UTC midnight from the passed date, so the transit was
+     computed over a different 24 hours than the two rows beside it and could name a peak
+     belonging to the wrong day. Fixed 2026-09-05. */
   let peakAlt = -Infinity, peakTime = null;
   const STEP_MS = 15 * 60 * 1000; /* 15-minute intervals */
   for (let i = 0; i <= 96; i++) {  /* 96 = 24 hours * 4 samples/hour */
