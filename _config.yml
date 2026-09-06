@@ -19,3 +19,7 @@ exclude:
   - fastlane/
   - NOTICE
   - DISCLAIMER.md
+  - bump_assets.py
+  - tools/
+# bump_assets.py and tools/ added 2026-09-05: the estate-wide sweep found both still
+# reachable from the live site (tools/build-store-icon.py returned 200).
