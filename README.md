@@ -26,6 +26,8 @@ MoonApp ships in two distinct package editions:
 * **Moon Distance:** Kilometres from Earth at the selected date.
 * **Lunation Calculator:** Next new moon and full moon dates calculated client-side.
 * **Offline City Search:** Autocomplete for global cities.
+* **Typed Coordinates:** Any point on the globe by latitude and longitude. A decimal comma works as well as a point (`60,39` or `60.39`), and so does a typographic minus; anything out of range is refused with a message rather than computed.
+* **No Location Request:** The page never asks for the device's location. A place comes from city search or from typed coordinates.
 
 ### Android APK Specific (`moonapp.apk`)
 * **Lunar Alarm Engine:** Wake up or receive alerts based on celestial lunar movements:

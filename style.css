@@ -308,11 +308,22 @@ input[type="date"].text-input {
   background: rgba(0, 0, 0, 0.45);
 }
 
-/* Remove browser number spinners */
-.text-input[type="number"]::-webkit-inner-spin-button,
-.text-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+/* Inline message under a coordinate field when it cannot be read */
+.field-error {
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.text-input[aria-invalid="true"] {
+  border-color: rgba(255, 107, 107, 0.6);
+}
+
+/* Echo of the coordinates actually used, e.g. "Using 60.39, 5.32" */
+.field-note {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Date picker icon tint — blue instead of gold */
@@ -432,33 +443,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .city-missing-note a:hover { color: var(--accent-silver); }
 
-/* ── DEVICE PANEL ───────────────────────────────────────────── */
-.device-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--sp-md);
-  padding: var(--sp-md) 0;
-}
-
-.device-hint {
-  color: var(--text-secondary);
-  font-size: 0.88rem;
-  text-align: center;
-}
-
-.device-coords {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  color: var(--accent-teal);
-  text-align: center;
-  background: rgba(79, 195, 247, 0.07);
-  border: 1px solid rgba(79, 195, 247, 0.18);
-  border-radius: var(--r-sm);
-  padding: var(--sp-sm) var(--sp-md);
-  width: 100%;
-}
-
 /* ── DATE FIELD ─────────────────────────────────────────────── */
 .date-field {
   margin-top: var(--sp-lg);
@@ -517,6 +501,32 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none !important;
+}
+
+/* ── ANDROID APP LINK ───────────────────────────────────────── */
+/* The secondary button look, a size smaller, so the store link stays modest
+   next to the Calculate button. Plain text: no store badge, no third-party image. */
+.store-link-row {
+  text-align: center;
+}
+
+.store-link {
+  font-size: 0.88rem;
+  padding: 0.6rem 1.25rem;
+  text-decoration: none;
+}
+
+/* Read by screen readers, not shown on screen. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ── ERROR MESSAGE ──────────────────────────────────────────── */

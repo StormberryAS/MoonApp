@@ -2,9 +2,11 @@
  * MoonApp — app.js
  * A fully client-side moon data calculator.
  * Libraries: SunCalc (local), Intl API (built-in).
- * For raw GPS / device coords we resolve the timezone offline: typed
- * coordinates use the nearest known city and device geolocation uses the
- * browser's own IANA zone. Nothing hits the network.
+ * Typed coordinates resolve their timezone offline, from the nearest known
+ * city. Nothing hits the network.
+ * There is no device-location option: the stormberry.as zone sends
+ * Permissions-Policy geolocation=(), which blocks it on every Labs host,
+ * so it was removed on 2026-10-02.
  */
 
 'use strict';
@@ -21,10 +23,8 @@
    SECTION 2 — APPLICATION STATE
 ================================================================ */
 const state = {
-  tab:       'city',   /* 'city' | 'gps' | 'device' */
+  tab:       'city',   /* 'city' | 'gps' */
   city:      null,     /* selected city object from CITIES */
-  deviceLat: null,     /* latitude from device geolocation */
-  deviceLon: null,     /* longitude from device geolocation */
 };
 
 /* ================================================================
@@ -35,7 +35,6 @@ const els = {
   tabs:            document.querySelectorAll('.tab'),
   panelCity:       document.getElementById('panel-city'),
   panelGps:        document.getElementById('panel-gps'),
-  panelDevice:     document.getElementById('panel-device'),
   citySearch:      document.getElementById('city-search'),
   cityDropdown:    document.getElementById('city-dropdown'),
   citySelected:    document.getElementById('city-selected'),
@@ -43,8 +42,9 @@ const els = {
   cityClearBtn:    document.getElementById('city-clear-btn'),
   latInput:        document.getElementById('lat-input'),
   lonInput:        document.getElementById('lon-input'),
-  getLocationBtn:  document.getElementById('get-location-btn'),
-  deviceCoords:    document.getElementById('device-coords'),
+  latError:        document.getElementById('lat-error'),
+  lonError:        document.getElementById('lon-error'),
+  gpsEcho:         document.getElementById('gps-echo'),
   dateInput:       document.getElementById('date-input'),
   calculateBtn:    document.getElementById('calculate-btn'),
   errorMsg:        document.getElementById('error-msg'),
@@ -76,7 +76,10 @@ function init() {
   els.citySearch.addEventListener('keydown', onCityKeydown);
   els.cityDropdown.addEventListener('click', onDropdownClick);
   els.cityClearBtn.addEventListener('click', clearCitySelection);
-  els.getLocationBtn.addEventListener('click', onGetLocation);
+  /* Editing a coordinate clears its error and the "Using ..." line, which
+     described the previous value, until the next Calculate. */
+  els.latInput.addEventListener('input', () => { setFieldError(els.latInput, els.latError, null); setEcho(null); });
+  els.lonInput.addEventListener('input', () => { setFieldError(els.lonInput, els.lonError, null); setEcho(null); });
   els.calculateBtn.addEventListener('click', onCalculate);
   /* Close dropdown when clicking outside the search widget */
   document.addEventListener('click', e => {
@@ -96,7 +99,7 @@ function onTabClick(e) {
     t.classList.toggle('active', active);
     t.setAttribute('aria-selected', String(active));
   });
-  [els.panelCity, els.panelGps, els.panelDevice].forEach(p => {
+  [els.panelCity, els.panelGps].forEach(p => {
     p.hidden = true;
     p.classList.remove('active');
   });
@@ -200,40 +203,43 @@ function closeDropdown() {
 }
 
 /* ================================================================
-   SECTION 7 — DEVICE GEOLOCATION
+   SECTION 7: TYPED NUMBERS
 ================================================================ */
-function onGetLocation() {
-  if (!navigator.geolocation) { showError('Geolocation is not supported by your browser.'); return; }
-  els.getLocationBtn.disabled = true;
-  els.getLocationBtn.textContent = 'Locating\u2026';
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      state.deviceLat = pos.coords.latitude;
-      state.deviceLon = pos.coords.longitude;
-      els.deviceCoords.textContent =
-        'Lat\u00a0' + state.deviceLat.toFixed(6) + '\u2002Lon\u00a0' + state.deviceLon.toFixed(6);
-      els.deviceCoords.hidden = false;
-      els.getLocationBtn.disabled = false;
-      els.getLocationBtn.innerHTML =
-        '<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">'
-        + '<path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>'
-        + '</svg>Update Location';
-    },
-    err => {
-      showError('Could not get your location: ' + err.message);
-      els.getLocationBtn.disabled = false;
-      els.getLocationBtn.textContent = 'Try Again';
-    },
-    { enableHighAccuracy: true, timeout: 10000 }
-  );
+// Shared Labs parser: accepts "60,39" and a Unicode minus, rejects anything else or out of range (null).
+function parseDecimal(text, min, max) {
+  if (text == null) return null;
+  let s = String(text).trim().replace(/[\u2212\u2012\u2013\u2014\uFE63\uFF0D]/g, '-').replace(/\s+/g, '');
+  if (/^[+-]?\d+,\d+$/.test(s)) s = s.replace(',', '.');
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n >= min && n <= max ? n : null;
+}
+
+/** Show (msg) or clear (null) the inline message under one coordinate field. */
+function setFieldError(input, errorEl, msg) {
+  if (msg) {
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+    input.setAttribute('aria-invalid', 'true');
+  } else {
+    errorEl.textContent = '';
+    errorEl.hidden = true;
+    input.removeAttribute('aria-invalid');
+  }
+}
+
+/** Show (text) or clear (null) the "Using ..." line. Cleared text, not just
+ *  hidden: aria-describedby still reads a hidden element it points at. */
+function setEcho(text) {
+  els.gpsEcho.textContent = text || '';
+  els.gpsEcho.hidden = !text;
 }
 
 /* ================================================================
    SECTION 8 — TIMEZONE RESOLVER (fully offline)
    Timezone resolution never touches the network. City-tab zones come
-   straight from the bundled city database; typed coordinates resolve to
-   the nearest known city's zone; device geolocation uses the browser's
-   own IANA zone. Nothing hits the network.
+   straight from the bundled city database, and typed coordinates resolve
+   to the nearest known city's zone. Nothing hits the network.
 ================================================================ */
 function nearestCityTimezone(lat, lon) {
   // Timezones are large political regions and the bundled city list is dense
@@ -252,9 +258,7 @@ function nearestCityTimezone(lat, lon) {
 }
 
 function resolveTimezone(lat, lon) {
-  const ianaId = (state.tab === 'device')
-    ? (Intl.DateTimeFormat().resolvedOptions().timeZone || nearestCityTimezone(lat, lon))
-    : nearestCityTimezone(lat, lon);
+  const ianaId = nearestCityTimezone(lat, lon);
   return { ianaId, abbreviation: getTimezoneAbbreviation(ianaId, els.dateInput.value) };
 }
 
@@ -271,20 +275,25 @@ async function onCalculate() {
     tzInfo = { ianaId: state.city.tz, abbreviation: getTimezoneAbbreviation(state.city.tz, els.dateInput.value) };
 
   } else if (state.tab === 'gps') {
-    const latVal = parseFloat(els.latInput.value);
-    const lonVal = parseFloat(els.lonInput.value);
-    if (isNaN(latVal) || isNaN(lonVal)) { showError('Please enter valid numeric latitude and longitude values.'); return; }
-    if (latVal < -90 || latVal > 90)    { showError('Latitude must be between \u221290 and 90.'); return; }
-    if (lonVal < -180 || lonVal > 180)  { showError('Longitude must be between \u2212180 and 180.'); return; }
-    lat = latVal; lon = lonVal;
-    showLoading(true);
-    try { tzInfo = await resolveTimezone(lat, lon); }
-    catch (err) { showLoading(false); showError('Could not resolve timezone: ' + err.message); return; }
-    showLoading(false);
+    const latVal = parseDecimal(els.latInput.value, -90, 90);
+    const lonVal = parseDecimal(els.lonInput.value, -180, 180);
 
-  } else if (state.tab === 'device') {
-    if (state.deviceLat === null) { showError('Please retrieve your device location first.'); return; }
-    lat = state.deviceLat; lon = state.deviceLon;
+    setFieldError(els.latInput, els.latError,
+      latVal === null ? 'Enter a latitude between -90 and 90, such as 60.39 or 60,39.' : null);
+    setFieldError(els.lonInput, els.lonError,
+      lonVal === null ? 'Enter a longitude between -180 and 180, such as 5.32 or 5,32.' : null);
+
+    if (latVal === null || lonVal === null) {
+      /* Do not compute, and do not leave an older result showing under the error. */
+      setEcho(null);
+      els.resultsCard.setAttribute('hidden', '');
+      (latVal === null ? els.latInput : els.lonInput).focus();
+      return;
+    }
+
+    lat = latVal; lon = lonVal;
+    /* Echo the numbers actually used, so "6,5" visibly became 6.5. */
+    setEcho('Using ' + lat + ', ' + lon);
     showLoading(true);
     try { tzInfo = await resolveTimezone(lat, lon); }
     catch (err) { showLoading(false); showError('Could not resolve timezone: ' + err.message); return; }
@@ -705,7 +714,8 @@ function escapeHtml(str) {
 /* ================================================================
    SECTION 14 — UI STATE HELPERS
 ================================================================ */
-function showError(msg)  { els.errorMsg.textContent = msg; els.errorMsg.removeAttribute('hidden'); }
+/* An error also hides any earlier result, so it cannot be read as the answer to the new input. */
+function showError(msg)  { els.errorMsg.textContent = msg; els.errorMsg.removeAttribute('hidden'); els.resultsCard.setAttribute('hidden', ''); }
 function clearError()    { els.errorMsg.setAttribute('hidden',''); els.errorMsg.textContent = ''; }
 function showLoading(on) { els.loadingOverlay.hidden = !on; }
 
