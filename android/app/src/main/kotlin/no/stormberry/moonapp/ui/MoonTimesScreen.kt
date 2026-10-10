@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import no.stormberry.moonapp.alarm.AlarmCapability
 import no.stormberry.moonapp.ui.components.AppFooter
@@ -267,8 +268,21 @@ private fun StatRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = Moon.TextSecondary)
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = Moon.TextPrimary)
+        // A gap the value can never close, and a value that wraps flush right. Set in Inter,
+        // "Next new moon" plus a long date ("Wednesday 9 December 2026") is wider than a
+        // 360 dp phone allows: the two ran together and the year wrapped under the left edge.
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Moon.TextSecondary,
+            modifier = Modifier.padding(end = 12.dp),
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Moon.TextPrimary,
+            textAlign = TextAlign.End,
+        )
     }
     Spacer(Modifier.height(4.dp))
 }

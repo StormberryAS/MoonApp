@@ -1,0 +1,9 @@
+1.0.3 changes the typeface.
+
+- Uses the Inter typeface throughout the app, the same one the website uses. The fonts
+  are bundled inside the app, so nothing is downloaded and the app still has no
+  INTERNET permission.
+- The alarm screen that appears when an alarm rings now uses the same typeface as the
+  rest of the app.
+- On narrow phones, a long date such as the next new moon no longer runs into its
+  label. The date now wraps neatly on the right.

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
@@ -27,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import no.stormberry.moonapp.ui.MoonAppTheme
 
 /**
  * Full-screen Ring Activity shown over the lock screen when a lunar alarm triggers.
@@ -73,7 +73,10 @@ class RingActivity : ComponentActivity() {
         val cityName = intent.getStringExtra("CITY_NAME") ?: "Local"
 
         setContent {
-            MaterialTheme {
+            // MoonAppTheme, not a bare MaterialTheme, so this screen is set in Inter like the
+            // rest of the app. Every colour below is explicit, so the theme's palette changes
+            // nothing here.
+            MoonAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0xFF0F172A) // Deep Night Indigo

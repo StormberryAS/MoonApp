@@ -69,12 +69,17 @@ android {
         // Sovereign 1.0.2 (code 3): the footer. Privacy and Disclaimer links, and the
         // Stormberry lockup made tappable, in step with the same change to SunApp.
         //
+        // Sovereign 1.0.3 (code 4), 2026-10-10: Inter. The app is set in the typeface
+        // moon.stormberry.as self-hosts, bundled in res/font, plus one layout fix it forced
+        // (a long date no longer runs into its label on a 360 dp phone). Code 4 is free
+        // here: Play is a different package and has never been released.
+        //
         // Play 1.1.0 (code 4): RESERVED, not yet released. Play comes second, and the rule
         // from UsernameGenerator holds here too: every Play upload must be built from a
         // sovereign tag that already shipped, same code, different application ID and
         // different signature. Never respin Play from an untagged tree.
-        versionCode = if (playBuild) 4 else 3
-        versionName = if (playBuild) "1.1.0" else "1.0.2"
+        versionCode = if (playBuild) 4 else 4
+        versionName = if (playBuild) "1.1.0" else "1.0.3"
 
         vectorDrawables.generatedDensities()
 
