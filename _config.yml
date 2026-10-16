@@ -23,3 +23,10 @@ exclude:
   - tools/
 # bump_assets.py and tools/ added 2026-09-05: the estate-wide sweep found both still
 # reachable from the live site (tools/build-store-icon.py returned 200).
+  # Type-checking tooling, added 2026-10-16. Dev-only: the site is still plain JavaScript
+  # with no build step, so none of this may ever be served.
+  - node_modules/
+  - package.json
+  - package-lock.json
+  - jsconfig.json
+  - types/

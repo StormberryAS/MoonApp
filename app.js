@@ -11,6 +11,40 @@
 
 'use strict';
 
+/* Types for the TypeScript checker only (see jsconfig.json); the browser ignores them.
+   City, SunCalc and foldQuery come from types/cities.d.ts and types/suncalc.d.ts. */
+
+/**
+ * The resolved zone for a calculation.
+ * @typedef {object} TzInfo
+ * @property {string} ianaId        IANA identifier, for example "Europe/Oslo"
+ * @property {string} abbreviation  short name such as "CET", or "" when Intl has none
+ */
+
+/**
+ * Everything renderResults shows.
+ * @typedef {object} MoonResults
+ * @property {number} lat
+ * @property {number} lon
+ * @property {string} tz
+ * @property {string} tzAbbr
+ * @property {string} dateStr
+ * @property {string} [locationLabel]  computed by onCalculate but not shown
+ * @property {string | null} moonriseStr
+ * @property {string | null} moonsetStr
+ * @property {string | null} transitStr
+ * @property {boolean} alwaysUp
+ * @property {boolean} alwaysDown
+ * @property {string} phaseName
+ * @property {number} illumPct
+ * @property {number} phaseAngle
+ * @property {number} phaseFraction
+ * @property {number} phaseRaw
+ * @property {number} distanceKm
+ * @property {Date | null} nextNew
+ * @property {Date | null} nextFull
+ */
+
 /* ================================================================
    SECTION 1 — CITY DATABASE
    Identical to SunApp — 2,000+ cities with IANA timezone IDs.
@@ -22,6 +56,7 @@
 /* ================================================================
    SECTION 2 — APPLICATION STATE
 ================================================================ */
+/** @type {{ tab: string, city: City | null }} */
 const state = {
   tab:       'city',   /* 'city' | 'gps' */
   city:      null,     /* selected city object from CITIES */
@@ -32,38 +67,40 @@ const state = {
    Cache all DOM references once at start-up.
 ================================================================ */
 const els = {
-  tabs:            document.querySelectorAll('.tab'),
-  panelCity:       document.getElementById('panel-city'),
-  panelGps:        document.getElementById('panel-gps'),
-  citySearch:      document.getElementById('city-search'),
-  cityDropdown:    document.getElementById('city-dropdown'),
-  citySelected:    document.getElementById('city-selected'),
-  citySelectedTxt: document.getElementById('city-selected-text'),
-  cityClearBtn:    document.getElementById('city-clear-btn'),
-  latInput:        document.getElementById('lat-input'),
-  lonInput:        document.getElementById('lon-input'),
-  latError:        document.getElementById('lat-error'),
-  lonError:        document.getElementById('lon-error'),
-  gpsEcho:         document.getElementById('gps-echo'),
-  dateInput:       document.getElementById('date-input'),
-  calculateBtn:    document.getElementById('calculate-btn'),
-  errorMsg:        document.getElementById('error-msg'),
-  resultsCard:     document.getElementById('results-card'),
-  resCoords:       document.getElementById('res-coords'),
-  resDate:         document.getElementById('res-date'),
-  resTz:           document.getElementById('res-tz'),
-  resMoonrise:     document.getElementById('res-moonrise'),
-  resTransit:      document.getElementById('res-transit'),
-  resMoonset:      document.getElementById('res-moonset'),
-  phaseCanvas:     document.getElementById('phase-canvas'),
-  resPhaseName:    document.getElementById('res-phase-name'),
-  resIllumination: document.getElementById('res-illumination'),
-  resDistance:     document.getElementById('res-distance'),
-  resNextNew:      document.getElementById('res-next-new'),
-  resNextFull:     document.getElementById('res-next-full'),
-  resIllumPct:     document.getElementById('res-illum-pct'),
-  illumBarFill:    document.getElementById('illum-bar-fill'),
-  loadingOverlay:  document.getElementById('loading-overlay'),
+  /* Every id below is in index.html, which loads this script last, so each cast only drops
+     the null that getElementById allows for a missing element. */
+  tabs:            /** @type {NodeListOf<HTMLButtonElement>} */ (document.querySelectorAll('.tab')),
+  panelCity:       /** @type {HTMLElement} */ (document.getElementById('panel-city')),
+  panelGps:        /** @type {HTMLElement} */ (document.getElementById('panel-gps')),
+  citySearch:      /** @type {HTMLInputElement} */ (document.getElementById('city-search')),
+  cityDropdown:    /** @type {HTMLUListElement} */ (document.getElementById('city-dropdown')),
+  citySelected:    /** @type {HTMLElement} */ (document.getElementById('city-selected')),
+  citySelectedTxt: /** @type {HTMLElement} */ (document.getElementById('city-selected-text')),
+  cityClearBtn:    /** @type {HTMLButtonElement} */ (document.getElementById('city-clear-btn')),
+  latInput:        /** @type {HTMLInputElement} */ (document.getElementById('lat-input')),
+  lonInput:        /** @type {HTMLInputElement} */ (document.getElementById('lon-input')),
+  latError:        /** @type {HTMLElement} */ (document.getElementById('lat-error')),
+  lonError:        /** @type {HTMLElement} */ (document.getElementById('lon-error')),
+  gpsEcho:         /** @type {HTMLElement} */ (document.getElementById('gps-echo')),
+  dateInput:       /** @type {HTMLInputElement} */ (document.getElementById('date-input')),
+  calculateBtn:    /** @type {HTMLButtonElement} */ (document.getElementById('calculate-btn')),
+  errorMsg:        /** @type {HTMLElement} */ (document.getElementById('error-msg')),
+  resultsCard:     /** @type {HTMLElement} */ (document.getElementById('results-card')),
+  resCoords:       /** @type {HTMLElement} */ (document.getElementById('res-coords')),
+  resDate:         /** @type {HTMLElement} */ (document.getElementById('res-date')),
+  resTz:           /** @type {HTMLElement} */ (document.getElementById('res-tz')),
+  resMoonrise:     /** @type {HTMLElement} */ (document.getElementById('res-moonrise')),
+  resTransit:      /** @type {HTMLElement} */ (document.getElementById('res-transit')),
+  resMoonset:      /** @type {HTMLElement} */ (document.getElementById('res-moonset')),
+  phaseCanvas:     /** @type {HTMLCanvasElement} */ (document.getElementById('phase-canvas')),
+  resPhaseName:    /** @type {HTMLElement} */ (document.getElementById('res-phase-name')),
+  resIllumination: /** @type {HTMLElement} */ (document.getElementById('res-illumination')),
+  resDistance:     /** @type {HTMLElement} */ (document.getElementById('res-distance')),
+  resNextNew:      /** @type {HTMLElement} */ (document.getElementById('res-next-new')),
+  resNextFull:     /** @type {HTMLElement} */ (document.getElementById('res-next-full')),
+  resIllumPct:     /** @type {HTMLElement} */ (document.getElementById('res-illum-pct')),
+  illumBarFill:    /** @type {HTMLElement} */ (document.getElementById('illum-bar-fill')),
+  loadingOverlay:  /** @type {HTMLElement} */ (document.getElementById('loading-overlay')),
 };
 
 /* ================================================================
@@ -83,16 +120,18 @@ function init() {
   els.calculateBtn.addEventListener('click', onCalculate);
   /* Close dropdown when clicking outside the search widget */
   document.addEventListener('click', e => {
-    if (!els.citySearch.closest('.search-wrapper').contains(e.target)) closeDropdown();
+    if (!/** @type {Element} */ (els.citySearch.closest('.search-wrapper')).contains(/** @type {Node | null} */ (e.target))) closeDropdown();
   });
 }
 
 /* ================================================================
    SECTION 5 — TAB SWITCHING
 ================================================================ */
+/** @param {MouseEvent} e */
 function onTabClick(e) {
-  const btn = e.currentTarget;
-  const tab = btn.dataset.tab;
+  const btn = /** @type {HTMLButtonElement} */ (e.currentTarget);
+  /* Both .tab buttons in index.html carry data-tab ("city" or "gps"). */
+  const tab = /** @type {string} */ (btn.dataset.tab);
   state.tab = tab;
   els.tabs.forEach(t => {
     const active = t.dataset.tab === tab;
@@ -103,7 +142,7 @@ function onTabClick(e) {
     p.hidden = true;
     p.classList.remove('active');
   });
-  const panel = document.getElementById('panel-' + tab);
+  const panel = /** @type {HTMLElement} */ (document.getElementById('panel-' + tab));
   panel.hidden = false;
   panel.classList.add('active');
 }
@@ -134,6 +173,7 @@ function onCityInput() {
   renderDropdown(matches);
 }
 
+/** @param {City[]} cities */
 function renderDropdown(cities) {
   els.cityDropdown.innerHTML = '';
   highlightedIndex = -1;
@@ -141,7 +181,7 @@ function renderDropdown(cities) {
     const li = document.createElement('li');
     li.setAttribute('role', 'option');
     li.setAttribute('id', 'city-option-' + idx);
-    li.dataset.idx = idx;
+    li.dataset.idx = String(idx);
     li.innerHTML = '<span class="city-name">' + escapeHtml(city.name) + '</span>'
                  + '<span class="city-country">' + escapeHtml(city.country) + '</span>';
     li._city = city;
@@ -151,6 +191,7 @@ function renderDropdown(cities) {
   els.citySearch.setAttribute('aria-expanded', 'true');
 }
 
+/** @param {KeyboardEvent} e */
 function onCityKeydown(e) {
   if (els.cityDropdown.hidden) return;
   const items = els.cityDropdown.querySelectorAll('li');
@@ -165,21 +206,25 @@ function onCityKeydown(e) {
     updateHighlight(items);
   } else if (e.key === 'Enter') {
     e.preventDefault();
-    if (highlightedIndex >= 0) selectCity(items[highlightedIndex]._city);
+    /* Every row was built by renderDropdown, which always sets _city. */
+    if (highlightedIndex >= 0) selectCity(/** @type {City} */ (items[highlightedIndex]._city));
   } else if (e.key === 'Escape') {
     closeDropdown();
   }
 }
 
+/** @param {NodeListOf<HTMLLIElement>} items */
 function updateHighlight(items) {
   items.forEach((li, i) => li.classList.toggle('highlighted', i === highlightedIndex));
 }
 
+/** @param {MouseEvent} e */
 function onDropdownClick(e) {
-  const li = e.target.closest('li');
+  const li = /** @type {Element} */ (e.target).closest('li');
   if (li && li._city) selectCity(li._city);
 }
 
+/** @param {City} city */
 function selectCity(city) {
   state.city = city;
   els.citySearch.value = '';
@@ -206,6 +251,12 @@ function closeDropdown() {
    SECTION 7: TYPED NUMBERS
 ================================================================ */
 // Shared Labs parser: accepts "60,39" and a Unicode minus, rejects anything else or out of range (null).
+/**
+ * @param {string | null | undefined} text
+ * @param {number} min
+ * @param {number} max
+ * @returns {number | null}
+ */
 function parseDecimal(text, min, max) {
   if (text == null) return null;
   let s = String(text).trim().replace(/[\u2212\u2012\u2013\u2014\uFE63\uFF0D]/g, '-').replace(/\s+/g, '');
@@ -215,7 +266,12 @@ function parseDecimal(text, min, max) {
   return Number.isFinite(n) && n >= min && n <= max ? n : null;
 }
 
-/** Show (msg) or clear (null) the inline message under one coordinate field. */
+/**
+ * Show (msg) or clear (null) the inline message under one coordinate field.
+ * @param {HTMLInputElement} input
+ * @param {HTMLElement} errorEl
+ * @param {string | null} msg
+ */
 function setFieldError(input, errorEl, msg) {
   if (msg) {
     errorEl.textContent = msg;
@@ -229,7 +285,8 @@ function setFieldError(input, errorEl, msg) {
 }
 
 /** Show (text) or clear (null) the "Using ..." line. Cleared text, not just
- *  hidden: aria-describedby still reads a hidden element it points at. */
+ *  hidden: aria-describedby still reads a hidden element it points at.
+ *  @param {string | null} text */
 function setEcho(text) {
   els.gpsEcho.textContent = text || '';
   els.gpsEcho.hidden = !text;
@@ -241,10 +298,16 @@ function setEcho(text) {
    straight from the bundled city database, and typed coordinates resolve
    to the nearest known city's zone. Nothing hits the network.
 ================================================================ */
+/**
+ * @param {number} lat
+ * @param {number} lon
+ * @returns {string} IANA zone of the nearest catalogue city
+ */
 function nearestCityTimezone(lat, lon) {
   // Timezones are large political regions and the bundled city list is dense
   // near populated areas, so the nearest city's zone is the correct one in
   // practice. Equirectangular distance is plenty for a nearest-neighbour pick.
+  /** @type {City | null} */
   let best = null, bestDist = Infinity;
   for (const c of CITIES) {
     let dLon = Math.abs(c.lon - lon);
@@ -257,6 +320,11 @@ function nearestCityTimezone(lat, lon) {
   return best ? best.tz : (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
 }
 
+/**
+ * @param {number} lat
+ * @param {number} lon
+ * @returns {TzInfo}
+ */
 function resolveTimezone(lat, lon) {
   const ianaId = nearestCityTimezone(lat, lon);
   return { ianaId, abbreviation: getTimezoneAbbreviation(ianaId, els.dateInput.value) };
@@ -267,7 +335,10 @@ function resolveTimezone(lat, lon) {
 ================================================================ */
 async function onCalculate() {
   clearError();
-  let lat, lon, tzInfo;
+  /* Both tabs below assign lat, lon and tzInfo or return early, so the NaN start values are
+     never read; they exist so the checker can see lat and lon are always numbers. */
+  let lat = NaN, lon = NaN;
+  /** @type {TzInfo | undefined} */ let tzInfo;
 
   if (state.tab === 'city') {
     if (!state.city) { showError('Please select a city from the search list first.'); return; }
@@ -296,12 +367,17 @@ async function onCalculate() {
     setEcho('Using ' + lat + ', ' + lon);
     showLoading(true);
     try { tzInfo = await resolveTimezone(lat, lon); }
-    catch (err) { showLoading(false); showError('Could not resolve timezone: ' + err.message); return; }
+    catch (err) { showLoading(false); showError('Could not resolve timezone: ' + /** @type {Error} */ (err).message); return; }
     showLoading(false);
   }
 
   /* Offset of an IANA zone from UTC, in milliseconds, at a given instant. Uses Intl so it
      honours daylight saving rather than assuming a fixed offset. */
+  /**
+   * @param {string} ianaId
+   * @param {Date} at
+   * @returns {number}
+   */
   function cityUtcOffsetMs(ianaId, at) {
     try {
       const dtf = new Intl.DateTimeFormat('en-US', {
@@ -309,9 +385,10 @@ async function onCalculate() {
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit',
       });
+      /** @type {Record<string, string>} */
       const p = {};
       for (const { type, value } of dtf.formatToParts(at)) p[type] = value;
-      const asUtc = Date.UTC(+p.year, p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+      const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
       return asUtc - Math.floor(at.getTime() / 1000) * 1000;
     } catch (e) {
       return 0;   /* unknown zone: fall back to a UTC day rather than throwing */
@@ -322,7 +399,8 @@ async function onCalculate() {
   const [year, month, day] = els.dateInput.value.split('-').map(Number);
   if (!year || !month || !day) { showError('Please select a valid date.'); return; }
   const dateForCalc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-  const tz = tzInfo.ianaId;
+  /* Both tabs set tzInfo or return above; state.tab is only ever 'city' or 'gps'. */
+  const tz = /** @type {TzInfo} */ (tzInfo).ianaId;
 
   /* Moon rise / set.
      THE DAY WINDOW IS THE CITY'S LOCAL DAY, and it is passed in UTC mode.
@@ -346,8 +424,8 @@ async function onCalculate() {
      truncation removed, so the window really does start where it is told to. Fixed
      2026-09-05. */
   const moonTimes    = moonTimesFrom(cityMidnightUtc, lat, lon);
-  const moonriseValid = moonTimes.rise instanceof Date && !isNaN(moonTimes.rise);
-  const moonsetValid  = moonTimes.set  instanceof Date && !isNaN(moonTimes.set);
+  const moonriseValid = moonTimes.rise instanceof Date && !isNaN(moonTimes.rise.getTime());
+  const moonsetValid  = moonTimes.set  instanceof Date && !isNaN(moonTimes.set.getTime());
   /* DO NOT TRUST suncalc's alwaysUp/alwaysDown flags. Its sign test reads a parabola
      evaluated at a vertex that can lie outside the sampled window, and a sweep of latitudes
      -89 to +89 across 2026 found 1,485 of 12,217 flagged days labelled the wrong way round,
@@ -365,8 +443,8 @@ async function onCalculate() {
     alwaysUp = peak > 0;
     alwaysDown = !alwaysUp;
   }
-  const moonriseStr   = moonriseValid ? formatTime(moonTimes.rise, tz) : null;
-  const moonsetStr    = moonsetValid  ? formatTime(moonTimes.set,  tz) : null;
+  const moonriseStr   = moonriseValid ? formatTime(/** @type {Date} */ (moonTimes.rise), tz) : null;
+  const moonsetStr    = moonsetValid  ? formatTime(/** @type {Date} */ (moonTimes.set),  tz) : null;
 
   /* Lunar transit (highest point in sky) */
   const transitStr = findLunarTransit(cityMidnightUtc, lat, lon, tz);
@@ -384,12 +462,14 @@ async function onCalculate() {
   const { nextNew, nextFull } = getNextLunations(dateForCalc);
 
   /* Location label */
+  /* The city tab returned above unless a city is selected, and nothing in between awaits. */
+  const city = /** @type {City} */ (state.city);
   const locationLabel = state.tab === 'city'
-    ? state.city.name + ', ' + state.city.country
+    ? city.name + ', ' + city.country
     : lat.toFixed(4) + '\u00b0, ' + lon.toFixed(4) + '\u00b0';
 
   renderResults({
-    lat, lon, tz, tzAbbr: tzInfo.abbreviation,
+    lat, lon, tz, tzAbbr: /** @type {TzInfo} */ (tzInfo).abbreviation,
     dateStr: formatDate(dateForCalc), locationLabel,
     moonriseStr, moonsetStr, transitStr, alwaysUp, alwaysDown,
     phaseName, illumPct,
@@ -401,6 +481,7 @@ async function onCalculate() {
 /* ================================================================
    SECTION 10 — RESULTS RENDERING
 ================================================================ */
+/** @param {MoonResults} results */
 function renderResults({
   lat, lon, tz, tzAbbr, dateStr,
   moonriseStr, moonsetStr, transitStr, alwaysUp, alwaysDown,
@@ -470,6 +551,8 @@ function renderResults({
 /**
  * Maps a SunCalc phase fraction (0..1) to one of the 8 named phases.
  * 0 = New Moon, 0.25 = First Quarter, 0.5 = Full Moon, 0.75 = Last Quarter.
+ * @param {number} phase
+ * @returns {string}
  */
 function getMoonPhaseName(phase) {
   if (phase < 0.0625 || phase >= 0.9375) return 'New Moon';
@@ -485,9 +568,12 @@ function getMoonPhaseName(phase) {
 /**
  * Finds the next New Moon and Full Moon by iterating day-by-day (up to 35 days).
  * Detects phase crossings: New Moon when phase wraps ~1->0, Full Moon when ~0.5.
+ * @param {Date} fromDate
+ * @returns {{ nextNew: Date | null, nextFull: Date | null }}
  */
 function getNextLunations(fromDate) {
-  let nextNew = null, nextFull = null;
+  /** @type {Date | null} */ let nextNew = null;
+  /** @type {Date | null} */ let nextFull = null;
   let prevPhase = SunCalc.getMoonIllumination(fromDate).phase;
   for (let d = 1; d <= 35; d++) {
     const candidate = new Date(fromDate.getTime() + d * 86400000);
@@ -513,13 +599,22 @@ function getNextLunations(fromDate) {
  *
  * Kept in step with MoonCalc.times on the Android side and with
  * tools/gen-webparity-golden.mjs, which generates the corpus the Kotlin is tested against.
+ *
+ * @param {Date} start  first instant of the 24-hour window
+ * @param {number} lat
+ * @param {number} lon
+ * @returns {{ rise?: Date, set?: Date }}
  */
 function moonTimesFrom(start, lat, lon) {
+  /** @type {(d: Date, h: number) => Date} */
   const hoursLater = (d, h) => new Date(d.valueOf() + h * 3600000);
   const H0 = 0.133 * Math.PI / 180;
+  /** @type {(h: number) => number} */
   const alt = h => SunCalc.getMoonPosition(hoursLater(start, h), lat, lon).altitude - H0;
 
-  let h0 = alt(0), rise, set, ye;
+  /** @type {number | undefined} */ let rise;
+  /** @type {number | undefined} */ let set;
+  let h0 = alt(0), ye;
   for (let i = 1; i <= 24; i += 2) {
     const h1 = alt(i), h2 = alt(i + 1);
     const a = (h0 + h2) / 2 - h1;
@@ -527,7 +622,9 @@ function moonTimesFrom(start, lat, lon) {
     const xe = -b / (2 * a);
     ye = (a * xe + b) * xe + h1;
     const d = b * b - 4 * a * h1;
-    let roots = 0, x1, x2;
+    /* x1 and x2 are only read when roots > 0, which needs d >= 0, where both are assigned.
+       The 0 start values exist for the checker and are never used. */
+    let roots = 0, x1 = 0, x2 = 0;
     if (d >= 0) {
       const dx = Math.sqrt(d) / (Math.abs(a) * 2);
       x1 = xe - dx; x2 = xe + dx;
@@ -540,6 +637,7 @@ function moonTimesFrom(start, lat, lon) {
     if (rise && set) break;
     h0 = h2;
   }
+  /** @type {{ rise?: Date, set?: Date }} */
   const out = {};
   if (rise) out.rise = hoursLater(start, rise);
   if (set) out.set = hoursLater(start, set);
@@ -549,13 +647,20 @@ function moonTimesFrom(start, lat, lon) {
 /**
  * Finds the Lunar Transit time (highest altitude) by sampling every 15 minutes.
  * Returns a formatted time string in the target timezone, or null if below horizon.
+ * @param {Date} dayStart
+ * @param {number} lat
+ * @param {number} lon
+ * @param {string} tz
+ * @returns {string | null}
  */
 function findLunarTransit(dayStart, lat, lon, tz) {
   /* dayStart is the CITY'S local midnight as an instant, the same window the rise and set
      search uses. It used to rebuild UTC midnight from the passed date, so the transit was
      computed over a different 24 hours than the two rows beside it and could name a peak
      belonging to the wrong day. Fixed 2026-09-05. */
-  let peakAlt = -Infinity, peakTime = null;
+  /** @type {Date | null} */
+  let peakTime = null;
+  let peakAlt = -Infinity;
   const STEP_MS = 15 * 60 * 1000; /* 15-minute intervals */
   for (let i = 0; i <= 96; i++) {  /* 96 = 24 hours * 4 samples/hour */
     const t   = new Date(dayStart.getTime() + i * STEP_MS);
@@ -572,8 +677,15 @@ function findLunarTransit(dayStart, lat, lon, tz) {
    Algorithm: fill lit circle, then overlay shadow hemisphere using a
    clipped ellipse whose width scales with the shadow fraction.
 ================================================================ */
+/**
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} phaseRaw    SunCalc phase, 0 to 1
+ * @param {number} phaseAngle  SunCalc limb angle, radians (not used by the drawing)
+ */
 function drawPhaseDisc(canvas, phaseRaw, phaseAngle) {
-  const ctx = canvas.getContext('2d');
+  /* getContext('2d') is null only when the canvas already holds another kind of context,
+     and nothing else draws on this one. */
+  const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
   const W   = canvas.width,  H = canvas.height;
   const cx  = W / 2,        cy = H / 2;
   const r   = W / 2 - 2;   /* 2px outer padding */
@@ -673,6 +785,9 @@ function getTodayString() {
 /**
  * Formats a UTC Date as "HH:MM:SS" in the specified IANA timezone.
  * This ensures times are always shown in the target location's time, not the browser's.
+ * @param {Date} date
+ * @param {string} tzId
+ * @returns {string}
  */
 function formatTime(date, tzId) {
   return new Intl.DateTimeFormat('en-GB', {
@@ -683,6 +798,8 @@ function formatTime(date, tzId) {
 
 /**
  * Formats a Date as "DD/MonthName/YYYY" using UTC parts (avoids timezone day shift).
+ * @param {Date} date
+ * @returns {string}
  */
 function formatDate(date) {
   const MONTHS = ['January','February','March','April','May','June',
@@ -693,6 +810,9 @@ function formatDate(date) {
 
 /**
  * Returns the short timezone abbreviation (e.g. "CET") via the Intl API.
+ * @param {string} ianaId
+ * @param {string} dateStr  "YYYY-MM-DD"
+ * @returns {string}
  */
 function getTimezoneAbbreviation(ianaId, dateStr) {
   try {
@@ -706,7 +826,9 @@ function getTimezoneAbbreviation(ianaId, dateStr) {
   } catch { return ''; }
 }
 
-/** Escapes HTML special chars to prevent XSS in city name display. */
+/** Escapes HTML special chars to prevent XSS in city name display.
+ *  @param {string} str
+ *  @returns {string} */
 function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -715,8 +837,10 @@ function escapeHtml(str) {
    SECTION 14 — UI STATE HELPERS
 ================================================================ */
 /* An error also hides any earlier result, so it cannot be read as the answer to the new input. */
+/** @param {string} msg */
 function showError(msg)  { els.errorMsg.textContent = msg; els.errorMsg.removeAttribute('hidden'); els.resultsCard.setAttribute('hidden', ''); }
 function clearError()    { els.errorMsg.setAttribute('hidden',''); els.errorMsg.textContent = ''; }
+/** @param {boolean} on */
 function showLoading(on) { els.loadingOverlay.hidden = !on; }
 
 /* ================================================================
