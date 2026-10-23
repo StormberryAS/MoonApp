@@ -1,5 +1,5 @@
 # Golden vectors for MoonCalc.illumination, generated from SunCalc 1.8.0 (suncalc.js),
-# the exact library the web app ships. Regenerate with tools/gen-golden.mjs.
+# the exact library the web app ships. Regenerate with tools/gen-golden.ts.
 # iso_utc,fraction,phase
 2026-01-03T00:17:00Z,0.996910277,0.482297534
 2026-01-09T06:17:00Z,0.639061933,0.705143714

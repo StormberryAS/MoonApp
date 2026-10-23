@@ -1,0 +1,23 @@
+# GitHub's language bar counts what people write, not what a tool generates or what was copied in
+# from elsewhere. The files below are one or the other, so they are marked and left out of the
+# statistics (and the diffs of generated files are collapsed by default on GitHub). Added on
+# 22 October 2026 with the TypeScript move, on SunApp's model.
+#
+# app.js is compiled from ts/app.ts by tools/build-ts.sh; edit the TypeScript.
+/app.js linguist-generated=true
+# cities.js is the shared Labs city catalogue, written by SunApp's update_cities.py into nine app
+# repositories in one run (with data/cities.tsv, which tools/check-city-parity.py holds it to).
+/cities.js linguist-generated=true
+# suncalc.js is SunCalc 1.8.0 (BSD-2-Clause, mourner/suncalc), vendored and kept byte for byte.
+/suncalc.js linguist-vendored=true
+# The test corpora for the Android port, each written from the vendored suncalc.js by the tools/
+# generator of the same name (gen-golden.ts, gen-moontimes-golden.ts, gen-webparity-golden.ts);
+# the tests hold them to it with --check.
+/android/app/src/test/resources/mooncalc-golden.csv linguist-generated=true
+/android/app/src/test/resources/moontimes-golden.csv linguist-generated=true
+/android/app/src/test/resources/webparity-golden.csv linguist-generated=true
+# The page and search vectors, captured from the MoonApp 90d11dd page (the last hand-written
+# app.js) by tests/capture-vectors.ts and tests/capture-search.ts, and replayed by tests/smoke.ts
+# and tests/search.test.ts against the current page.
+/tests/page-vectors.json linguist-generated=true
+/tests/search-vectors.json linguist-generated=true

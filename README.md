@@ -60,31 +60,43 @@ MoonApp ships in two distinct package editions:
 
 ## Architecture & Stack
 
-* **Web Front-End:** Vanilla HTML, CSS, JS with zero build step.
+* **Web Front-End:** Vanilla HTML, CSS and TypeScript, no frameworks and no runtime dependencies. The page code is written in TypeScript (`ts/app.ts`) and compiled to the plain `app.js` the page loads, which is committed, so GitHub Pages serves the repository as it is with no build step of its own.
 * **Android Native App:** Kotlin with Jetpack Compose UI and native `AlarmManager` integration.
 * **Calculation Engine:** Astronomical moon algorithms following the published SunCalc 1.8.0
   formulae. The web app uses SunCalc 1.8.0 itself (`suncalc.js`); the Android app carries an
-  independent Kotlin implementation of the same formulae in `lunar/MoonCalc.kt`. They are not
-  yet parity-tested against each other: a golden-vector test in the shape of SunApp's
-  `SunCalcGoldenTest` is still to be written, and the claim of parity should not be made until
-  it exists.
+  independent Kotlin implementation of the same formulae in `lunar/MoonCalc.kt`. The Kotlin
+  side is held to the library by golden corpora written from `suncalc.js` itself
+  (`MoonCalcGoldenTest`, `MoonTimesGoldenTest`, and `MoonTimesWebParityTest` for the page's
+  city-local day), and `tools/gen-*.ts --check` proves the corpora still match the vendored file.
 
 ---
 
-## Type checking
+## TypeScript, build and tests
 
-`app.js` stays plain JavaScript that the browser loads as written, with no build step. Its
-types live in JSDoc comments, and the TypeScript compiler (6.0.3, pinned) only checks them
-(`checkJs`, `noEmit`, `strict`). The vendored `suncalc.js` and the generated `cities.js` are
-not checked; hand-written declarations for them live in `types/`.
+The page code is TypeScript: edit `ts/app.ts`, never `app.js`. `tools/build-ts.sh` compiles it
+with the pinned TypeScript 6.0.3 (strict) into `app.js`, a classic script like before, and then
+runs `bump_assets.py` so the page loads the new file under a fresh `?v=` stamp. `app.js` is
+committed, because GitHub Pages publishes the repository as it is; `.gitattributes` marks it as
+generated. The build refuses to overwrite an `app.js` edited by hand. `suncalc.js` (SunCalc 1.8.0,
+vendored, byte for byte) and `cities.js` (written by SunApp's `update_cities.py`) are not compiled;
+their declarations live in `ts/`.
+
+Needs Node 24 and Python 3. The tests are TypeScript too, run by Node directly.
 
 ```sh
-npm ci --ignore-scripts && npm run typecheck
+tools/build-ts.sh            # npm ci (frozen, install scripts off), type-check, compile ts/ to app.js, stamp the page
+tools/build-ts.sh --check    # change nothing; fail if app.js or a stamp is stale, the city data disagree,
+                             # or an Android test corpus is not what its generator writes
+npm test                     # unit tests: page helpers, city search, golden corpora, city parity, the TypeScript rule
+npm run smoke                # the page in headless Chromium, against snapshots captured from the 90d11dd page
+node tools/gen-golden.ts [--check]             # (re)write the Android illumination corpus
+node tools/gen-moontimes-golden.ts [--check]   # (re)write the Android moonrise and moonset corpus (UTC day)
+node tools/gen-webparity-golden.ts [--check]   # (re)write the corpus of the page's city-local day
 ```
 
-A clean run prints nothing and exits 0. `package.json`, `package-lock.json`, `jsconfig.json`,
-`types/` and `node_modules/` are development files only: `_config.yml` keeps them off the
-site, and the Android build copies only `data/cities.tsv`.
+`package.json`, `package-lock.json`, `.npmrc`, `tsconfig.json`, `ts/`, `tests/`, `tools/` and
+`node_modules/` are development files only: `_config.yml` keeps them off the site, and the Android
+build copies only `data/cities.tsv`.
 
 ---
 

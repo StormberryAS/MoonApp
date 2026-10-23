@@ -1,5 +1,5 @@
 # Golden moonrise/moonset from suncalc.js (SunCalc.getMoonTimes, UTC mode).
-# Regenerate: node tools/gen-moontimes-golden.mjs
+# Regenerate: node tools/gen-moontimes-golden.ts
 # place,lat,lon,date,rise_iso_or_blank,set_iso_or_blank,flag
 Bergen,60.3913,5.3221,2026-01-15,2026-01-15T07:15:41.652Z,2026-01-15T10:34:51.932Z,
 Bergen,60.3913,5.3221,2026-03-21,2026-03-21T05:32:10.932Z,2026-03-21T22:27:31.174Z,

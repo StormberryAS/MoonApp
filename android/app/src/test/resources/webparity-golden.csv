@@ -1,5 +1,5 @@
 # Golden moonrise/moonset AS THE WEBSITE COMPUTES THEM (city-local day window).
-# Mirrors app.js:326-328. Regenerate: node tools/gen-webparity-golden.mjs
+# Mirrors app.js:326-328. Regenerate: node tools/gen-webparity-golden.ts
 # place,lat,lon,tz,date,rise_iso_or_blank,set_iso_or_blank,flag
 Bergen,60.3913,5.3221,Europe/Oslo,2026-01-15,2026-01-15T07:15:53.755Z,2026-01-15T10:34:50.953Z,
 Bergen,60.3913,5.3221,Europe/Oslo,2026-02-28,2026-02-28T12:25:20.388Z,2026-02-28T06:45:50.699Z,

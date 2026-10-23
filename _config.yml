@@ -23,10 +23,16 @@ exclude:
   - tools/
 # bump_assets.py and tools/ added 2026-09-05: the estate-wide sweep found both still
 # reachable from the live site (tools/build-store-icon.py returned 200).
-  # Type-checking tooling, added 2026-10-16. Dev-only: the site is still plain JavaScript
-  # with no build step, so none of this may ever be served.
+# Type-checking tooling, added 2026-10-16, then the TypeScript move (22 October 2026, on SunApp's
+# model of 21 October): the TypeScript sources (ts/), the tests (tests/), the package files, .npmrc,
+# tsconfig.json and the installed compiler (node_modules/, never committed) are excluded. tools/
+# (which now also holds build-ts.sh and the three corpus generators) was excluded already. The page
+# loads only the compiled app.js, which IS published. jsconfig.json and types/ are gone: the
+# declarations moved into ts/.
   - node_modules/
   - package.json
   - package-lock.json
-  - jsconfig.json
-  - types/
+  - .npmrc
+  - tsconfig.json
+  - ts/
+  - tests/
