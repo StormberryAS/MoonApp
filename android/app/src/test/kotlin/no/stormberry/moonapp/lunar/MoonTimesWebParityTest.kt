@@ -26,7 +26,11 @@ import kotlin.math.abs
  * day apart on moonset at Sydney. The website side of this was fixed on 2026-09-04 and the
  * Android side was not, which is precisely the gap a suncalc-only corpus cannot see.
  *
- * Regenerate the corpus with: node tools/gen-webparity-golden.mjs
+ * Since 1.0.4 (fix F-5) ten rows are on days a zone changes its offset, which run 23 or 25
+ * hours on both surfaces; on Sunday 1 November 2026 in New York the moonrise at 23:05 falls in
+ * the 25th hour, past the end of a 24-hour search.
+ *
+ * Regenerate the corpus with: node tools/gen-webparity-golden.ts
  */
 class MoonTimesWebParityTest {
 

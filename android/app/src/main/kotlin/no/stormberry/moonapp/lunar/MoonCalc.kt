@@ -47,6 +47,13 @@ object MoonCalc {
 
     // Mathematical constants used for angle conversions and day length calculations.
     private const val RAD = PI / 180.0
+
+    /**
+     * The altitude of the moon's centre, in radians, at which suncalc (and so [times] and the
+     * website's moonTimesFrom) calls it risen: 0.133 degrees, for the moon's apparent radius
+     * and refraction. [dayKind] uses the same threshold since 1.0.4 (fix F-3).
+     */
+    const val RISE_ALTITUDE_RAD: Double = 0.133 * RAD
     private const val DAY_MS = 86_400_000.0
     private const val J1970 = 2_440_588.0
     private const val J2000 = 2_451_545.0
@@ -162,6 +169,12 @@ object MoonCalc {
      * evaluates a vertex that can fall outside the sampled window. A sweep of latitudes -89 to
      * +89 across 2026 found 12,217 days carrying suncalc's flag and 1,485 of them, 12.2 per
      * cent, labelled the wrong way round, worst at Tromso and Longyearbyen.
+     *
+     * "Up" means above [RISE_ALTITUDE_RAD], the threshold [times] calls a rise (1.0.4, fix F-3).
+     * Until then this tested `peak > 0.0`, so a moon whose centre peaked between 0 and 0.133
+     * degrees was ALWAYS_UP although by the app's own definition it never rose: 22 of 6,274 such
+     * days in a 2026 sweep. The website made the same change; lunar-daykind-parity.csv holds the
+     * two together.
      */
     fun dayKind(
         date: LocalDate,
@@ -172,12 +185,15 @@ object MoonCalc {
         val t = times(date, latDeg, lonDeg, zone)
         if (t[LunarEvent.MOONRISE] != null || t[LunarEvent.MOONSET] != null) return LunarDayKind.NORMAL
         val startOfDay = date.atStartOfDay(zone).toInstant()
+        val hours = dayHours(date, zone)
         var peak = -Double.MAX_VALUE
-        for (i in 0..96) {
+        var i = 0
+        while (i <= hours * 4) {
             val a = position(startOfDay.plusSeconds(i * 900L), latDeg, lonDeg).altitudeRad
             if (a > peak) peak = a
+            i++
         }
-        return if (peak > 0.0) LunarDayKind.ALWAYS_UP else LunarDayKind.ALWAYS_DOWN
+        return if (peak > RISE_ALTITUDE_RAD) LunarDayKind.ALWAYS_UP else LunarDayKind.ALWAYS_DOWN
     }
 
     /**
@@ -188,10 +204,16 @@ object MoonCalc {
      * (`Date.UTC(y, m, d) - tzOffsetMs`), not at UTC midnight, so for anywhere with a non-zero
      * offset the two surfaces were searching different 24-hour windows and returned different
      * answers for the same calendar date: over an hour apart at Bergen, and a full day apart on
-     * moonset at Sydney. The default stays UTC because `tools/gen-moontimes-golden.mjs` pins
+     * moonset at Sydney. The default stays UTC because `tools/gen-moontimes-golden.ts` pins
      * the algorithm against suncalc.js in UTC mode, and because OccurrenceEngine scans a
      * contiguous span of days where the boundary only decides which day an event is filed
      * under, never whether it is found. Anything the USER reads must pass the place's zone.
+     *
+     * The day runs from date.atStartOfDay(zone) to the next day's start (1.0.4, fix F-5): 24
+     * hours, except 23 or 25 on a day the zone changes its offset. Until then the search always
+     * ran 24 hours, so on a fall-back day it left the last hour out (and the next day starts after
+     * it), and on a spring-forward day it ran an hour into the next day. The website made the same
+     * change, and webparity-golden.csv and transit-parity.csv hold those days on both sides.
      */
     fun times(
         date: LocalDate,
@@ -200,6 +222,7 @@ object MoonCalc {
         zone: java.time.ZoneId = ZoneOffset.UTC,
     ): Map<LunarEvent, Instant?> {
         val startOfDay = date.atStartOfDay(zone).toInstant()
+        val hours = dayHours(date, zone)
 
         // HOURLY SEARCH WITH QUADRATIC INTERPOLATION, ported from SunCalc's getMoonTimes,
         // which is what the website runs. The previous implementation stepped in 20-minute
@@ -210,18 +233,18 @@ object MoonCalc {
         //
         // h0 is the altitude the moon's centre has when its upper limb touches the horizon,
         // allowing for the mean apparent radius and refraction. SunCalc uses 0.133 rad.
-        val h0 = 0.133 * RAD
+        val h0 = RISE_ALTITUDE_RAD
         var rise: Double? = null
         var set: Double? = null
-        var transit: Instant? = null
-        var maxAlt = -Double.MAX_VALUE
 
         fun altAt(hours: Double): Double =
             position(startOfDay.plusSeconds((hours * 3600.0).toLong()), latDeg, lonDeg).altitudeRad - h0
 
         var h00 = altAt(0.0)
         var hour = 1.0
-        while (hour <= 24.0) {
+        // With 24 hours this is getMoonTimes' own loop (hour 1 to 23); a 25-hour day needs one
+        // more parabola, and a crossing past the day's end is not counted (inWindow).
+        while (hour - 1.0 < hours) {
             val h1 = altAt(hour)
             val h2 = altAt(hour + 1.0)
             // fit a parabola through the three samples and solve it for the horizon crossing
@@ -241,46 +264,25 @@ object MoonCalc {
                 if (Math.abs(x2) <= 1.0) roots++
                 if (x1 < -1.0) x1 = x2
             }
+            fun inWindow(x: Double): Boolean = hour + x <= hours
             if (roots == 1) {
-                if (h00 < 0) rise = hour + x1 else set = hour + x1
+                if (inWindow(x1)) { if (h00 < 0) rise = hour + x1 else set = hour + x1 }
             } else if (roots == 2) {
-                rise = hour + (if (ye < 0) x2 else x1)
-                set = hour + (if (ye < 0) x1 else x2)
+                val r = if (ye < 0) x2 else x1
+                val s = if (ye < 0) x1 else x2
+                if (inWindow(r)) rise = hour + r
+                if (inWindow(s)) set = hour + s
             }
             if (rise != null && set != null) break
             h00 = h2
             hour += 2.0
         }
 
-        // TRANSIT gets its own scan. It used to be read off the rise/set loop, which steps two
-        // hours at a time and breaks as soon as both crossings are found, so on most days the
-        // scan never reached the peak at all: median error 45 minutes, worst case 23 hours, and
-        // a LUNAR_TRANSIT alarm rang at the wrong time. The website scans every 15 minutes
-        // (app.js:447-461), so match that, then refine with the parabola vertex through the
-        // best sample and its two neighbours. Fixed 2026-09-04.
-        run {
-            val stepMinutes = 15
-            val steps = 24 * 60 / stepMinutes
-            var bestIdx = 0
-            var bestAlt = -Double.MAX_VALUE
-            val alts = DoubleArray(steps + 1)
-            for (i in 0..steps) {
-                val a = altAt(i * stepMinutes / 60.0) + h0     // undo the horizon offset
-                alts[i] = a
-                if (a > bestAlt) { bestAlt = a; bestIdx = i }
-            }
-            var peakMinutes = bestIdx.toDouble() * stepMinutes
-            if (bestIdx in 1 until steps) {
-                val y0 = alts[bestIdx - 1]; val y1 = alts[bestIdx]; val y2 = alts[bestIdx + 1]
-                val denom = y0 - 2 * y1 + y2
-                if (denom != 0.0) {
-                    val offset = 0.5 * (y0 - y2) / denom          // vertex, in samples
-                    if (offset > -1.0 && offset < 1.0) peakMinutes += offset * stepMinutes
-                }
-            }
-            maxAlt = bestAlt
-            transit = startOfDay.plusSeconds((peakMinutes * 60.0).toLong())
-        }
+        // TRANSIT gets its own scan, [transitFrom]. It used to be read off the rise/set loop,
+        // which steps two hours at a time and breaks as soon as both crossings are found: median
+        // error 45 minutes, worst case 23 hours. Fixed 2026-09-04; made the culmination itself,
+        // and null on a day without one, in 1.0.4 (fix F-2, M-2).
+        val transit = transitFrom(startOfDay, latDeg, lonDeg, hours)
 
         val result = HashMap<LunarEvent, Instant?>()
         result[LunarEvent.MOONRISE] = rise?.let { startOfDay.plusMillis((it * 3600_000.0).toLong()) }
@@ -311,5 +313,72 @@ object MoonCalc {
         }
 
         return result
+    }
+
+    /** The length of [date] in [zone] in hours, from its first instant to the next day's. */
+    fun dayHours(date: LocalDate, zone: java.time.ZoneId): Double =
+        java.time.Duration.between(date.atStartOfDay(zone), date.plusDays(1).atStartOfDay(zone)).toMillis() / 3_600_000.0
+
+    /**
+     * False for a date [zone] skipped altogether, whose first instant is also the next day's, so
+     * that it lasts no time at all: Pacific/Apia went from 29 to 31 December 2011. [times] and
+     * [dayKind] have nothing to search on such a date (dayKind would read one sample and call it
+     * up or down all day), so the times screen says the date did not happen there instead, as
+     * the website does (1.0.4, fix round 2).
+     */
+    fun dateOccurs(date: LocalDate, zone: java.time.ZoneId): Boolean = dayHours(date, zone) > 0.0
+
+    /**
+     * The lunar transit (the moon's culmination) in the [hours] from [dayStart], or null when
+     * there is none: the same algorithm as the website's lunarTransitFrom, held to it by
+     * transit-parity.csv (1.0.4, fixes F-2, F-3, F-5 and M-2).
+     *
+     * Until 1.0.4 this took the highest of 97 samples taken every 15 minutes and refined it
+     * with the parabola vertex, and when the highest sample was at either end of the window it
+     * returned that end. The highest sample is not always the culmination: a lunar day is about
+     * 24 h 50 min, so about once a month the moon does not culminate inside a given day at all,
+     * and on other days its declination moves enough that it is higher at one end of the window
+     * than at its culmination. Two things went wrong on those days. The times card named the
+     * window's edge as the transit. And OccurrenceEngine, which scans UTC days one after
+     * another, found the edge of one day and the real culmination just after it as two
+     * occurrences, so a transit alarm could ring twice within an hour (M-2: 2026-10-28 00:00 and
+     * 00:33 UTC at Sydney).
+     *
+     * Now the transit is a sample at least as high as the one before it and higher than the one
+     * after it, refined with the vertex of the parabola through the three, the highest such
+     * culmination above [RISE_ALTITUDE_RAD]. The samples run one step past each end of the
+     * window, so a culmination within minutes of midnight is found from the same three instants
+     * by the windows on both sides, and the half-open window [start, end) gives it to exactly one
+     * of them, because each day's window ends where the next one starts ([times] passes the
+     * day's own length, 23 or 25 hours on a day the zone changes its offset, F-5). The result is
+     * truncated to whole seconds, as on the website.
+     *
+     * Only a culmination above the rise threshold counts (F-3). Until this fix any culmination
+     * above 0 did, so on the few days the moon's centre peaked between 0 and 0.133 degrees the
+     * times screen said Always Down while OccurrenceEngine still rang a transit alarm (69 N, 0 E
+     * on 9 February 2026).
+     */
+    fun transitFrom(dayStart: Instant, latDeg: Double, lonDeg: Double, hours: Double = 24.0): Instant? {
+        val steps = hours * 4               // every 15 minutes: 96 for 24 hours
+        val last = kotlin.math.ceil(steps).toInt()
+        // alts[i + 1] is the altitude at sample i, for i from -1 to last + 1.
+        val alts = DoubleArray(last + 3) { k ->
+            position(dayStart.plusSeconds((k - 1) * 900L), latDeg, lonDeg).altitudeRad
+        }
+        fun at(i: Int): Double = alts[i + 1]
+        var peak = Double.NaN
+        var peakAlt = Double.NEGATIVE_INFINITY
+        for (i in 0..last) {
+            if (!(at(i) >= at(i - 1) && at(i) > at(i + 1)) || at(i) <= RISE_ALTITUDE_RAD || at(i) <= peakAlt) continue
+            val denom = at(i - 1) - 2 * at(i) + at(i + 1)
+            val off = if (denom < 0) 0.5 * (at(i - 1) - at(i + 1)) / denom else 0.0
+            val v = if (off > -1 && off < 1) i + off else i.toDouble()
+            if (v < 0 || v >= steps) continue
+            peak = v
+            peakAlt = at(i)
+        }
+        if (peak.isNaN()) return null
+        // Same evaluation order as the website's Math.trunc(peak * 15 * 60).
+        return dayStart.plusSeconds(kotlin.math.truncate(peak * 15 * 60).toLong())
     }
 }

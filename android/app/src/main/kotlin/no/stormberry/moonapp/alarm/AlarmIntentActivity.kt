@@ -32,10 +32,8 @@ class AlarmIntentActivity : Activity() {
             // Stop a ringing alarm. Routed to the service rather than to the UI, so it works
             // whether or not RingActivity is on screen.
             "android.intent.action.DISMISS_ALARM" -> {
-                startService(
-                    Intent(this, AlarmService::class.java)
-                        .setAction(AlarmService.ACTION_STOP_ALARM)
-                )
+                // 1.0.4: the service and the backup ring notification alike.
+                AlarmService.dismiss(this)
             }
 
             // Open the app on the alarms tab, which is what "show my alarms" means here.

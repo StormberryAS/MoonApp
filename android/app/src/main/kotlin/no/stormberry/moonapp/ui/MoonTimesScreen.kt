@@ -90,11 +90,16 @@ fun MoonTimesScreen(
     val kind = remember(place.latDeg, place.lonDeg, date, zone) {
         MoonCalc.dayKind(date, place.latDeg, place.lonDeg, zone)
     }
+    // A date the place's clocks skipped (Pacific/Apia, 30 December 2011) has no times to show,
+    // and the polar notice would contradict the dashes beside it (fix round 2).
+    val occurs = remember(date, zone) { MoonCalc.dateOccurs(date, zone) }
     val illum = remember(noon) { MoonCalc.illumination(noon) }
     val position = remember(noon, place.latDeg, place.lonDeg) {
         MoonCalc.position(noon, place.latDeg, place.lonDeg)
     }
-    val lunations = remember(date) { MoonPhase.nextLunations(date) }
+    // In the place's zone: the first new and full moon at or after the start of this day there,
+    // dated there, as the website shows them (1.0.4, fix F-1).
+    val lunations = remember(date, zone) { MoonPhase.nextLunations(date, zone) }
 
     val timeFmt = remember { DateTimeFormatter.ofPattern("HH:mm") }
     val dateFmt = remember { DateTimeFormatter.ofPattern("EEEE d MMMM yyyy") }
@@ -159,39 +164,47 @@ fun MoonTimesScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    when (kind) {
-                        LunarDayKind.ALWAYS_UP -> PolarNotice(
-                            "The moon is above the horizon all day",
-                            "It neither rises nor sets on this date at this latitude.",
+                    if (!occurs) {
+                        PolarNotice(
+                            "This date did not happen here",
+                            "The clocks in ${zone.id} skipped it. Please select another date.",
                             Moon.Silver,
                         )
-                        LunarDayKind.ALWAYS_DOWN -> PolarNotice(
-                            "The moon stays below the horizon all day",
-                            "It neither rises nor sets on this date at this latitude.",
-                            Moon.NewMoon,
+                    } else {
+                        when (kind) {
+                            LunarDayKind.ALWAYS_UP -> PolarNotice(
+                                "The moon is above the horizon all day",
+                                "It neither rises nor sets on this date at this latitude.",
+                                Moon.Silver,
+                            )
+                            LunarDayKind.ALWAYS_DOWN -> PolarNotice(
+                                "The moon stays below the horizon all day",
+                                "It neither rises nor sets on this date at this latitude.",
+                                Moon.NewMoon,
+                            )
+                            LunarDayKind.NORMAL -> Unit
+                        }
+
+                        if (kind != LunarDayKind.NORMAL) Spacer(Modifier.height(12.dp))
+
+                        fun show(i: Instant?): String =
+                            i?.atZone(zone)?.format(timeFmt) ?: "—"
+
+                        TimeRow("Moonrise", show(times[LunarEvent.MOONRISE]), Moon.Blue)
+                        // Suppressed when the moon is below the horizon for the whole day: a peak
+                        // altitude for a moon that never comes up contradicts the rows around it.
+                        if (kind != LunarDayKind.ALWAYS_DOWN) {
+                            TimeRow("Transit", show(times[LunarEvent.LUNAR_TRANSIT]), Moon.Violet)
+                        }
+                        TimeRow("Moonset", show(times[LunarEvent.MOONSET]), Moon.Teal)
+
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "Times shown in ${zone.id}.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Moon.TextMuted,
                         )
-                        LunarDayKind.NORMAL -> Unit
                     }
-
-                    if (kind != LunarDayKind.NORMAL) Spacer(Modifier.height(12.dp))
-
-                    fun show(i: Instant?): String =
-                        i?.atZone(zone)?.format(timeFmt) ?: "—"
-
-                    TimeRow("Moonrise", show(times[LunarEvent.MOONRISE]), Moon.Blue)
-                    // Suppressed when the moon is below the horizon for the whole day: a peak
-                    // altitude for a moon that never comes up contradicts the rows around it.
-                    if (kind != LunarDayKind.ALWAYS_DOWN) {
-                        TimeRow("Transit", show(times[LunarEvent.LUNAR_TRANSIT]), Moon.Violet)
-                    }
-                    TimeRow("Moonset", show(times[LunarEvent.MOONSET]), Moon.Teal)
-
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        "Times shown in ${zone.id}.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Moon.TextMuted,
-                    )
                 }
             }
         }

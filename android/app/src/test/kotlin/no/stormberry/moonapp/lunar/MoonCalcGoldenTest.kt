@@ -21,7 +21,7 @@ import java.time.Instant
  * The vectors below therefore sample five times of day across all twelve months. A test that
  * only checked midnight would still pass against the broken formula.
  *
- * Regenerate with: node tools/gen-golden.mjs
+ * Regenerate with: node tools/gen-golden.ts
  */
 class MoonCalcGoldenTest {
 

@@ -1,0 +1,8 @@
+1.0.4 makes alarms harder to lose and corrects the moon calendar.
+
+- With notifications off or turned down, an alarm still rings; open MoonApp to stop it.
+- On Android 12 with exact alarms off, alarms now ring through a notification instead of not at all.
+- A second alarm no longer leaves the first one ringing.
+- The next new and full moon are dated in the place's own time zone, and a transit alarm rings once.
+
+Full release log: https://github.com/StormberryAS/MoonApp/blob/main/CHANGELOG.md

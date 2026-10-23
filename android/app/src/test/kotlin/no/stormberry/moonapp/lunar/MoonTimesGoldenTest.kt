@@ -1,5 +1,6 @@
 package no.stormberry.moonapp.lunar
 
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Duration
@@ -17,7 +18,7 @@ import kotlin.math.abs
  * half an hour on the same date and city. The implementation now mirrors SunCalc's hourly
  * search with quadratic interpolation and its 0.133 rad horizon offset.
  *
- * Regenerate the corpus with: node tools/gen-moontimes-golden.mjs
+ * Regenerate the corpus with: node tools/gen-moontimes-golden.ts
  */
 class MoonTimesGoldenTest {
 
@@ -102,6 +103,12 @@ class MoonTimesGoldenTest {
      * peak: median error 45 minutes over 528 comparisons, worst case 23 hours at Tromso, and a
      * LUNAR_TRANSIT alarm rang at the wrong time. Verify against a brute-force one-minute scan,
      * which is the ground truth rather than either implementation.
+     *
+     * Since 1.0.4 (fix F-2) the ground truth is the culmination, the highest LOCAL maximum of
+     * the scan inside the day, not the highest minute of the day. They differ at Tromso on
+     * 2026-09-29: the moon culminates at 00:23 UTC, and is higher still at the very end of the
+     * day, on its way to the next culmination at 00:5x on the 30th. The old scan called the end
+     * of the window the true peak, which is the edge reading F-2 removes.
      */
     @Test
     fun `lunar transit lands on the true altitude peak`() {
@@ -114,20 +121,27 @@ class MoonTimesGoldenTest {
         for ((place, date) in cases) {
             val (name, lat, lon) = place
             val got = MoonCalc.times(date, lat, lon)[LunarEvent.LUNAR_TRANSIT]
-                ?: error("$name $date produced no transit")
-            // brute force: sample every minute of the UTC day and take the true maximum
+            // brute force: sample every minute of the UTC day, one minute past each end, and take
+            // the highest culmination (a minute higher than both its neighbours) inside the day
             val start = date.atStartOfDay(java.time.ZoneOffset.UTC).toInstant()
+            val alt = DoubleArray(1443) { k -> MoonCalc.position(start.plusSeconds((k - 1) * 60L), lat, lon).altitudeRad }
             var bestAt = start
             var best = -Double.MAX_VALUE
-            for (m in 0..1440) {
-                val i = start.plusSeconds(m * 60L)
-                val a = MoonCalc.position(i, lat, lon).altitudeRad
-                if (a > best) { best = a; bestAt = i }
+            for (m in 0 until 1440) {
+                val a = alt[m + 1]
+                if (a >= alt[m] && a > alt[m + 2] && a > best) { best = a; bestAt = start.plusSeconds(m * 60L) }
             }
+            if (best == -Double.MAX_VALUE || best < 0.0) {
+                // No culmination above the horizon inside the day: Rio on 2026-08-24 culminates at
+                // 23:41 on the 23rd and 00:30 on the 25th, so the 24th has no transit (1.0.4).
+                assertNull("$name $date: no culmination in the day, yet a transit $got", got)
+                continue
+            }
+            if (got == null) error("$name $date produced no transit; the scan found $bestAt")
             val offMinutes = abs(Duration.between(bestAt, got).toMinutes())
             assertTrue(
                 "$name $date transit off by $offMinutes min (true peak $bestAt, got $got)",
-                offMinutes <= 10
+                offMinutes <= 2
             )
         }
     }

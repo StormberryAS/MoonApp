@@ -21,6 +21,8 @@
 /android/app/src/test/resources/lunation-parity.csv linguist-generated=true
 /android/app/src/test/resources/transit-parity.csv linguist-generated=true
 /android/app/src/test/resources/lunar-daykind-parity.csv linguist-generated=true
+# The city search corpus, written from the compiled page by tools/gen-search-parity.ts.
+/android/app/src/test/resources/citysearch-golden.csv linguist-generated=true
 # The page and search vectors, captured by tests/capture-vectors.ts and tests/capture-search.ts and
 # replayed by tests/smoke.ts and tests/search.test.ts against the current page. The search vectors
 # are from the MoonApp 90d11dd page (the last hand-written app.js). The page vectors were first

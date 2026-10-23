@@ -29,9 +29,20 @@ class SystemEventReceiver : BroadcastReceiver() {
             // makes the platform cancel every one of ours; granting it back sends this
             // broadcast. It was already in the manifest filter and the when-block dropped it,
             // so nothing was re-armed until the next reboot and the alarms the user had just
-            // re-enabled stayed silent.
+            // re-enabled stayed silent. Revoking sends nothing, which is why since 1.0.4 the app
+            // also re-plans when it comes to the front (MainActivity), and on 12 and 12L keeps a
+            // backstop for the nearest alarm that survives the revocation (AndroidAlarmSink.guard).
+            //
+            // TIME_SET after a ring: the re-plan never arms an occurrence at or before the rule's
+            // last ring (FireRules.planAfter), so setting the clock back no longer rings the same
+            // occurrence twice (1.0.4, the A-8 related case).
             ACTION_EXACT_ALARM_STATE_CHANGED -> {
-                AlarmCapability.rearmAllAlarms(context)
+                // A receiver must never throw (1.0.4): the platform would treat it as a crash.
+                try {
+                    AlarmCapability.rearmAllAlarms(context)
+                } catch (e: RuntimeException) {
+                    android.util.Log.e("MoonSystemEvent", "re-planning after $action failed", e)
+                }
             }
         }
     }

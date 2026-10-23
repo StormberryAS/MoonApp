@@ -2,7 +2,7 @@
 // suncalc.js gives and the three F-1 to F-5 corpora what the compiled page gives (tools/gen-*.ts
 // --check), the web catalogue and the Android asset are the same data
 // (tools/check-city-parity.py), and the page itself computes what webparity-golden.csv says for
-// every one of its 81 rows: to the millisecond through its own moonTimesFrom, and to the second on
+// every one of its 91 rows: to the millisecond through its own moonTimesFrom, and to the second on
 // screen through onCalculate. Added 22 October 2026 with the TypeScript move, on SunApp's
 // tests/golden.test.ts. gen-webparity-golden.ts keeps its own copy of the page's moonTimesFrom
 // and finds the local day its own way; this file is what keeps the copy and the page from
@@ -27,7 +27,7 @@ test('moontimes-golden.csv is exactly what tools/gen-moontimes-golden.ts writes 
 });
 
 test('webparity-golden.csv is exactly what tools/gen-webparity-golden.ts writes from suncalc.js', () => {
-  assert.match(gen('gen-webparity-golden'), /golden check OK: .* 81 data rows/);
+  assert.match(gen('gen-webparity-golden'), /golden check OK: .* 91 data rows/);
 });
 
 test('the F-1 to F-5 parity corpora are exactly what tools/gen-lunar-parity.ts writes from the page', () => {
@@ -35,6 +35,10 @@ test('the F-1 to F-5 parity corpora are exactly what tools/gen-lunar-parity.ts w
   assert.match(out, /golden check OK: .*lunation-parity\.csv matches, 487 data rows/);
   assert.match(out, /golden check OK: .*transit-parity\.csv matches, 820 data rows/);
   assert.match(out, /golden check OK: .*lunar-daykind-parity\.csv matches, 355 data rows/);
+});
+
+test('citysearch-golden.csv is exactly what tools/gen-search-parity.ts writes from the page', () => {
+  assert.match(gen('gen-search-parity'), /golden check OK: .*citysearch-golden\.csv matches, 162 data rows/);
 });
 
 test('cities.js and data/cities.tsv hold the same catalogue', () => {
@@ -53,9 +57,9 @@ const parityRows = (): ParityRow[] => {
   });
 };
 
-test("the page's moonTimesFrom gives webparity-golden.csv's instants for all 81 rows", () => {
+test("the page's moonTimesFrom gives webparity-golden.csv's instants for all 91 rows", () => {
   const rows = parityRows();
-  assert.equal(rows.length, 81);
+  assert.equal(rows.length, 91);
   const page = loadPage();
   const moonTimesFrom = page.fn('moonTimesFrom'), localDayWindow = page.fn('localDayWindow');
   const iso = (ms: number | null): string => (ms === null ? '' : new Date(ms).toISOString().replace('.000', ''));
@@ -70,7 +74,7 @@ test("the page's moonTimesFrom gives webparity-golden.csv's instants for all 81 
   assert.deepEqual(bad, []);
 });
 
-test('the page shows those instants on screen, in the place\'s zone, for all 81 rows', async () => {
+test('the page shows those instants on screen, in the place\'s zone, for all 91 rows', async () => {
   const rows = parityRows();
   const page = loadPage();
   const onCalculate = page.fn('onCalculate');

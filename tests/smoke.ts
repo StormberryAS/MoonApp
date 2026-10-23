@@ -12,7 +12,7 @@
 // console error or policy violation under the zone's header; the compiled app.js is what is served,
 // under its current stamp; the sources and tooling are not served; the real dropdown lists what
 // tests/search-vectors.json says for 20 of its queries; the page shows
-// webparity-golden.csv's moonrise and moonset for all 81 rows, and transit-parity.csv's transits and
+// webparity-golden.csv's moonrise and moonset for all 91 rows, and transit-parity.csv's transits and
 // lunar-daykind-parity.csv's labels for every row, in the browser; no sideways scroll at
 // 320, 390 and 1280 px with a result shown or the city list open. Prints one line per check and
 // exits 1 on the first failure.
@@ -102,7 +102,8 @@ await check('sources, tooling and tests are not served; the site is', async () =
     'package.json', 'package-lock.json', 'tsconfig.json', '.npmrc', '.gitattributes', 'node_modules/typescript/package.json', 'bump_assets.py', 'README.md',
     'android/gradlew', 'android/app/build.gradle.kts', 'fastlane/metadata/android/en-US/full_description.txt', 'zapstore.yaml', 'DISCLAIMER.md', 'LICENSE',
     'jsconfig.json', 'types/app.d.ts', 'tools/gen-lunar-parity.ts', 'data/cities.tsv',
-    'android/app/src/test/resources/transit-parity.csv'];
+    'android/app/src/test/resources/transit-parity.csv',
+    'tools/gen-search-parity.ts', 'android/app/src/test/resources/citysearch-golden.csv'];
   for (const path of hidden) assert.equal((await fetch(`${base}${path}`)).status, 404, `${path} is not served`);
   for (const path of ['', 'index.html', 'app.js', 'cities.js', 'suncalc.js', 'style.css', 'disclaimer.html', 'favicon.svg', 'fonts/inter/inter.css', 'apple-touch-icon.png']) {
     assert.equal((await fetch(`${base}${path}`)).status, 200, `${path || '/'} is served`);
@@ -130,9 +131,9 @@ await check('the real dropdown lists what search-vectors.json says, for 20 of it
   await p.close();
 });
 
-await check('the page shows webparity-golden.csv\'s moonrise and moonset for all 81 rows, in the browser', async () => {
+await check('the page shows webparity-golden.csv\'s moonrise and moonset for all 91 rows, in the browser', async () => {
   const rows = read('android/app/src/test/resources/webparity-golden.csv').split('\n').filter((l) => l && !l.startsWith('#')).map((l) => l.split(','));
-  assert.equal(rows.length, 81);
+  assert.equal(rows.length, 91);
   const p = await openPage(browser, base, { timezone: 'Europe/Oslo', init: clockAt(NOW) });
   const got: string[][] = await p.ev(`(async () => {
     const out = [];

@@ -1,11 +1,6 @@
 package no.stormberry.moonapp.ui
 
-import android.Manifest
-import android.app.AlarmManager
-import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -33,6 +28,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,7 +40,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import no.stormberry.moonapp.alarm.AlarmCapability
 import no.stormberry.moonapp.alarm.OccurrenceEngine
 import no.stormberry.moonapp.alarm.model.MoonAlarmRule
@@ -245,22 +244,20 @@ private fun offsetLabel(minutes: Int): String = when {
  * on first launch, and the other two are Settings toggles with no runtime request API. What
  * this does is stop the app lying, by refusing to show an alarm as armed and ringing when the
  * platform will silently drop it.
+ *
+ * 1.0.4 (A-1, M-3): the gaps come from [AlarmCapability.gaps], which also sees notifications
+ * switched off on Android 7 to 12 and a ringing channel turned down, and they are read again
+ * every time the app comes back to the front. 1.0.3 read them once per composition, so after
+ * fixing a setting and pressing Back the banner still said it was missing. The texts are final
+ * (T-0, T-2, T-4 in the plan), approved by Marcos 23 Oct.
  */
 @Composable
 private fun CapabilityBanner() {
     val context = LocalContext.current
+    var gaps by remember { mutableStateOf(AlarmCapability.gaps(context)) }
+    RefreshOnResume { gaps = AlarmCapability.gaps(context) }
 
-    val notificationsOk = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-        PackageManager.PERMISSION_GRANTED
-
-    val exactOk = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
-
-    val fullScreenOk = Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
-        context.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
-
-    if (notificationsOk && exactOk && fullScreenOk) return
+    if (gaps.isEmpty()) return
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Moon.CardHover),
@@ -269,29 +266,29 @@ private fun CapabilityBanner() {
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                "These alarms cannot ring yet",
+                // Final T-0
+                "Android is limiting your alarms",
                 style = MaterialTheme.typography.titleMedium,
                 color = Moon.Error,
             )
             Spacer(Modifier.height(6.dp))
 
-            if (!notificationsOk) {
+            if (AlarmCapability.Gap.NOTIFICATIONS in gaps) {
                 BannerLine(
-                    "Notifications are blocked, so a firing alarm has nothing to show and no " +
-                        "way to take over the screen.",
+                    // Final T-2
+                    "Notifications are off or turned down for MoonApp, so an alarm still rings " +
+                        "but may show nothing on screen. Open MoonApp to stop it.",
                     "Open notification settings",
                 ) {
-                    context.startActivity(
-                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
+                    // The ringing channel's own page when only it is turned down, else the app's.
+                    context.startActivity(AlarmCapability.notificationSettingsIntent(context))
                 }
             }
-            if (!exactOk) {
+            if (AlarmCapability.Gap.EXACT_ALARMS in gaps) {
                 BannerLine(
-                    "Exact alarms are turned off. Android will not wake the device at the " +
-                        "computed time.",
+                    // Final T-4
+                    "Exact alarms are turned off, so Android may hold an alarm back to save " +
+                        "battery: it may ring late or not at all.",
                     "Allow exact alarms",
                 ) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -303,7 +300,7 @@ private fun CapabilityBanner() {
                     }
                 }
             }
-            if (!fullScreenOk) {
+            if (AlarmCapability.Gap.FULL_SCREEN in gaps) {
                 BannerLine(
                     "Full-screen alarms are turned off, so a locked phone will show a " +
                         "notification instead of the dismiss screen.",
@@ -319,6 +316,24 @@ private fun CapabilityBanner() {
                 }
             }
         }
+    }
+}
+
+/**
+ * Runs [onResume] every time the hosting activity comes back to the front: the grants above are
+ * changed on system settings screens, and resume is the only signal there is (1.0.4, M-3). On the
+ * activity's own lifecycle rather than a Compose helper, as SunApp, so no lifecycle-runtime-compose.
+ */
+@Composable
+private fun RefreshOnResume(onResume: () -> Unit) {
+    val activity = LocalActivity.current
+    DisposableEffect(activity) {
+        val lifecycle = (activity as? ComponentActivity)?.lifecycle
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) onResume()
+        }
+        lifecycle?.addObserver(observer)
+        onDispose { lifecycle?.removeObserver(observer) }
     }
 }
 

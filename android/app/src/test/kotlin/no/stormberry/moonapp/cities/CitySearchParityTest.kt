@@ -19,6 +19,9 @@ import java.io.File
  *
  * The catalogue is read from data/cities.tsv rather than from Android assets, which is what
  * keeps this a plain JUnit test with no device and no Robolectric.
+ *
+ * Since 1.0.4 the full ordered list of every query in citysearch-golden.csv is held to the
+ * website's, which tools/gen-search-parity.ts writes from the compiled page.
  */
 class CitySearchParityTest {
 
@@ -64,9 +67,72 @@ class CitySearchParityTest {
     }
 
     @Test
-    fun `a short query returns nothing rather than the whole catalogue`() {
-        // the picker only searches from two characters; a one-character query flooding the
-        // dropdown with thousands of rows is the failure this guards against
+    fun `a one-letter query lists at most eight cities`() {
+        // Renamed in 1.0.4: this was called "a short query returns nothing rather than the whole
+        // catalogue" and its comment said the picker searches from two characters, but it only
+        // ever asserted "at most 8", and the website searches from one character. What it checks
+        // is the cap, so that is its name now; the full answer is pinned below.
         assertTrue(CitySearch.search(table(), "B", limit = 8).size <= 8)
+    }
+
+    private data class Vector(val query: String, val open: Boolean, val rows: List<String>)
+
+    private fun unescape(s: String): String {
+        val out = StringBuilder()
+        var i = 0
+        while (i < s.length) {
+            val c = s[i]
+            if (c == '\\' && i + 1 < s.length) {
+                out.append(when (s[i + 1]) { 't' -> '\t'; 'n' -> '\n'; else -> s[i + 1] })
+                i += 2
+            } else {
+                out.append(c); i++
+            }
+        }
+        return out.toString()
+    }
+
+    private fun vectors(): List<Vector> =
+        javaClass.classLoader!!.getResourceAsStream("citysearch-golden.csv")!!
+            .bufferedReader().useLines { lines ->
+                lines.filterNot { it.isEmpty() || it.startsWith("#") }.map { l ->
+                    val f = l.split("\t")
+                    Vector(unescape(f[0]), f[1] == "1", f.drop(2))
+                }.toList()
+            }
+
+    /**
+     * A query of nothing but combining marks folds to nothing. The website then matches every
+     * city and lists the first eight of the catalogue; the app deliberately lists none (see
+     * [CitySearch.search]). The one known divergence, asserted as one so a change on either side
+     * is noticed.
+     */
+    private fun foldsToNothing(q: String): Boolean = foldQuery(q.trim()).isEmpty()
+
+    @Test
+    fun `every query lists the same cities in the same order as the website`() {
+        // citysearch-golden.csv is written from the compiled page by tools/gen-search-parity.ts
+        // (1.0.4, PLAN section 4.4): 162 queries, from plain and accented names, exonyms and
+        // country-only matches to HTML, no match and a single letter. Until 1.0.4 this class
+        // checked the top hit of four queries.
+        val t = table()
+        val all = vectors()
+        assertEquals("queries in citysearch-golden.csv", 162, all.size)
+        val failures = mutableListOf<String>()
+        var divergences = 0
+        for (v in all) {
+            val got = CitySearch.search(t, v.query, limit = 8).map { "${it.name}|${it.country}|${it.tz}" }
+            if (foldsToNothing(v.query)) {
+                divergences++
+                if (got.isNotEmpty() || !v.open || v.rows.size != 8) {
+                    failures += "${'"'}${v.query}${'"'}: the known divergence changed: app $got, website ${v.rows}"
+                }
+                continue
+            }
+            if (got != v.rows) failures += "${'"'}${v.query}${'"'}:\n  app     $got\n  website ${v.rows}"
+            if (v.open != v.rows.isNotEmpty()) failures += "${'"'}${v.query}${'"'}: the website's list is open with no rows"
+        }
+        assertEquals("queries that fold to nothing", 2, divergences)
+        assertTrue("${failures.size} failures:\n" + failures.joinToString("\n"), failures.isEmpty())
     }
 }

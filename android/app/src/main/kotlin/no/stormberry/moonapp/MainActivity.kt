@@ -1,6 +1,16 @@
 package no.stormberry.moonapp
 
 import android.Manifest
+import android.content.Intent
+import android.util.Log
+import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
+import no.stormberry.moonapp.alarm.AlarmPlanner
+import no.stormberry.moonapp.alarm.AlarmService
+import no.stormberry.moonapp.alarm.RingActivity
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -42,6 +52,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         /** Set by [no.stormberry.moonapp.alarm.AlarmIntentActivity] answering SHOW_ALARMS. */
         const val EXTRA_OPEN_ALARMS = "no.stormberry.moonapp.OPEN_ALARMS"
+        private const val TAG = "MoonMain"
     }
 
     // POST_NOTIFICATIONS was declared in the manifest but never requested, so on Android 13
@@ -91,5 +102,52 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        // The channels exist from the first start (1.0.4), so the alarms screen can read how the
+        // person left them and the system settings list both before any alarm has rung.
+        AlarmService.ensureChannels(this)
+
+        // 1.0.4, A-1: while this screen is in front, an alarm that rings brings the ring screen:
+        // at once on resume when one already rings, and whenever one starts while it is open.
+        // With notifications off or the ring channel turned down an alarm rings with nothing on
+        // screen to stop it, so opening MoonApp has to be a way to stop it (SunApp 1.1.4).
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                snapshotFlow { AlarmService.ringing.value }.collect { showRingScreenIfRinging() }
+            }
+        }
     }
+
+    override fun onResume() {
+        super.onResume()
+        replanInBackground()
+    }
+
+    /**
+     * 1.0.4, A-2: re-plan whenever the app comes to the front. On Android 12 and 12L, switching
+     * exact alarms off cancels every exact alarm with no broadcast to say so (granting them back
+     * does send one, which SystemEventReceiver handles), and until 1.0.4 nothing re-armed them
+     * before the next reboot or clock change. Off the main thread: it reads the rules and computes
+     * a lunar day per rule.
+     */
+    private fun replanInBackground() {
+        val appContext = applicationContext
+        Thread({
+            try {
+                AlarmPlanner.replan(appContext)
+            } catch (e: RuntimeException) {
+                Log.e(TAG, "re-planning on resume failed", e)
+            }
+        }, "moonapp-resume-replan").start()
+    }
+
+    private fun showRingScreenIfRinging() {
+        if (AlarmService.current() == null || isFinishing || isDestroyed) return
+        try {
+            startActivity(Intent(this, RingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "could not open the ring screen", e)
+        }
+    }
+
 }

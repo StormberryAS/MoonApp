@@ -166,4 +166,35 @@ class OccurrenceEngineTest {
             gapMinutes in 1350..1650
         )
     }
+
+    /**
+     * 1.0.4 (M-2): consecutive occurrences of each event over a year, as the receiver re-arms
+     * them one after another, are never closer than the event allows. 1.0.3 put a transit alarm
+     * at the edge of a UTC day and again at the real transit just after it (2026-10-28 00:00 and
+     * 00:33 UTC at Sydney), so it rang twice within an hour, 3 to 7 times a year per place.
+     */
+    @Test
+    fun `consecutive occurrences over a year are a lunar day or a lunation apart`() {
+        val places = listOf(Triple("Oslo", 59.9139, 10.7522), Triple("Bergen", 60.3913, 5.3221), Triple("Sydney", -33.8688, 151.2093))
+        val failures = mutableListOf<String>()
+        for ((name, lat, lon) in places) {
+            for (event in LunarEvent.entries) {
+                val minGap = when (event) {
+                    LunarEvent.FULL_MOON, LunarEvent.NEW_MOON -> Duration.ofDays(25)
+                    else -> Duration.ofHours(20)
+                }
+                var t = at("2026-01-01T00:00:00Z")
+                val end = at("2027-01-01T00:00:00Z")
+                var count = 0
+                while (t.isBefore(end)) {
+                    val next = OccurrenceEngine.findNextOccurrence(rule(event, lat = lat, lon = lon), t) ?: break
+                    if (count > 0 && Duration.between(t, next) < minGap) failures += "$name $event: $t then $next"
+                    t = next
+                    count++
+                }
+                if (count < 10) failures += "$name $event: only $count occurrences in 2026"
+            }
+        }
+        assertTrue(failures.joinToString("\n"), failures.isEmpty())
+    }
 }

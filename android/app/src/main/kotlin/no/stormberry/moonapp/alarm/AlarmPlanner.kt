@@ -1,100 +1,84 @@
 package no.stormberry.moonapp.alarm
 
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.os.Build
+import android.util.Log
 import no.stormberry.moonapp.alarm.model.MoonAlarmRule
 import java.time.Instant
 
 /**
- * System alarm planner for MoonApp.
+ * Decides which alarms are armed, and arms them through an [AlarmSink].
  *
- * For entry-level programmers:
- * On Android, the AlarmManager system service wakes up the device at exact timestamps even if the app
- * is closed or the screen is off (Doze mode).
- * AlarmPlanner uses PendingIntents—tokens handed to the Android OS that authorize the system to trigger
- * our AlarmFireReceiver broadcast when the scheduled time arrives.
+ * 1.0.4 splits it in two, as SunApp's: [plan] and [apply] are pure and tested on the JVM against
+ * a fake sink (AlarmPlannerTest), and [replan] is the one entry point every caller uses, reading
+ * the rules and the last rings and handing the result to [AndroidAlarmSink]. Until 1.0.4 each
+ * caller armed one rule straight into `AlarmManager`, and when `setAlarmClock` threw (Android 12
+ * and 12L with exact alarms off) the catch only logged it: nothing was armed at all (A-2).
  */
 object AlarmPlanner {
+
+    private const val TAG = "MoonAlarmPlanner"
+    private val lock = Any()
 
     // Every rule needs its OWN request code. A single shared constant meant every
     // PendingIntent compared equal, so arming a second alarm silently replaced the first
     // and only one alarm could ever exist. PendingIntent equality ignores extras, so the
     // request code is the only thing that separates them. Derived from the rule id, which
     // is stable across a reboot, unlike a list index. Fixed 2026-09-04.
-    private fun requestCodeFor(ruleId: String): Int = ruleId.hashCode()
+    fun requestCodeFor(ruleId: String): Int = ruleId.hashCode()
 
     /**
-     * Schedules the next occurrence of a lunar alarm rule with the Android OS AlarmManager.
-     *
-     * @param context Android Application Context.
-     * @param rule The active lunar alarm rule to arm.
+     * The next occurrence of every enabled rule after [now], or after the rule's last ring when
+     * that is later and still counts ([FireRules.planAfter]), so an occurrence that has rung is
+     * never armed again (the A-8 related double ring after the clock is set back).
      */
-    fun scheduleAlarm(context: Context, rule: MoonAlarmRule) {
-        val nextOccurrence = OccurrenceEngine.findNextOccurrence(rule) ?: return
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        val intent = Intent(context, AlarmFireReceiver::class.java).apply {
-            putExtra("RULE_ID", rule.id)
-            putExtra("RULE_LABEL", rule.label)
-            putExtra("EVENT_NAME", rule.event.displayName)
-            putExtra("CITY_NAME", rule.cityName)
-            putExtra("VIBRATE", rule.vibrate)
+    fun plan(rules: List<MoonAlarmRule>, now: Instant, lastRung: Map<String, Long> = emptyMap()): List<PlannedAlarm> =
+        rules.filter { it.enabled }.mapNotNull { rule ->
+            OccurrenceEngine.findNextOccurrence(rule, FireRules.planAfter(now, lastRung[rule.id]))
+                ?.let { PlannedAlarm(rule, it, requestCodeFor(rule.id)) }
         }
 
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            requestCodeFor(rule.id),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val triggerAtMillis = nextOccurrence.toEpochMilli()
-
-        // setAlarmClock, not setExactAndAllowWhileIdle. It is the API that declares this is
-        // a user-facing alarm clock: it is exempt from Doze, it surfaces in the status bar and
-        // in the system's next-alarm slot, and it is the concrete behaviour that justifies
-        // USE_EXACT_ALARM to a Play reviewer. setExactAndAllowWhileIdle does none of that.
-        val show = PendingIntent.getActivity(
-            context,
-            requestCodeFor(rule.id),
-            Intent(context, no.stormberry.moonapp.MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        // Guarded. On Android 12/12L the user can revoke SCHEDULE_EXACT_ALARM in Settings and
-        // this throws SecurityException; some vendor ROMs also throw on a pending-alarm limit.
-        // Unguarded, that exception propagated out of SystemEventReceiver.onReceive during the
-        // post-boot re-arm, so one refusing rule abandoned every rule after it in the loop.
-        // One alarm failing must not take the others with it.
-        try {
-            alarmManager.setAlarmClock(
-                AlarmManager.AlarmClockInfo(triggerAtMillis, show),
-                pendingIntent
-            )
-        } catch (e: SecurityException) {
-            e.printStackTrace()
-        } catch (e: IllegalStateException) {
-            e.printStackTrace()
+    /**
+     * Cancels every rule that has no planned alarm (switched off, or no occurrence within the
+     * search), arms every planned one under its own request code, and sets the Android 12 and 12L
+     * backstop for the nearest ([FireRules.backstopWanted]; null elsewhere, which cancels it).
+     * One rule failing never stops the others.
+     */
+    fun apply(rules: List<MoonAlarmRule>, plan: List<PlannedAlarm>, sink: AlarmSink, sdkInt: Int) {
+        val planned = plan.map { it.rule.id }.toSet()
+        for (rule in rules) {
+            if (rule.id !in planned) runCatching { sink.cancel(requestCodeFor(rule.id)) }
         }
+        for (p in plan) {
+            try {
+                sink.arm(p)
+            } catch (e: RuntimeException) {
+                // Inside runCatching: on the JVM (AlarmPlannerTest) android.util.Log is a stub that throws.
+                runCatching { Log.e(TAG, "arming ${p.rule.id} failed", e) }
+            }
+        }
+        val next = if (FireRules.backstopWanted(sdkInt)) plan.minByOrNull { it.fireAt } else null
+        runCatching { sink.guard(next) }
     }
 
     /**
-     * Cancels the pending alarm for one rule.
+     * Re-plans every rule from storage and arms the result. Called on every change: a rule saved
+     * or deleted, an alarm firing, a reboot or clock change, and the app coming to the front
+     * (1.0.4, A-2: on Android 12 and 12L, switching exact alarms off cancels every exact alarm with
+     * no broadcast to say so, and until 1.0.4 nothing re-armed them before the next reboot).
      */
-    fun cancelAlarm(context: Context, ruleId: String) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, AlarmFireReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            requestCodeFor(ruleId),
-            intent,
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-        )
-        if (pendingIntent != null) {
-            alarmManager.cancel(pendingIntent)
-            pendingIntent.cancel()
+    fun replan(context: Context, sink: AlarmSink = AndroidAlarmSink(context), now: Instant = Instant.now()): List<PlannedAlarm> =
+        synchronized(lock) {
+            val rules = AlarmCapability.loadRules(context)
+            runCatching { AlarmCapability.pruneRung(context, now.toEpochMilli(), rules.map { it.id }.toSet()) }
+            val lastRung = runCatching { AlarmCapability.lastRungAll(context) }.getOrDefault(emptyMap())
+            val plan = plan(rules, now, lastRung)
+            apply(rules, plan, sink, Build.VERSION.SDK_INT)
+            plan
         }
+
+    /** Cancels the alarm of one rule (a deleted rule, which the re-plan can no longer see). */
+    fun cancelAlarm(context: Context, ruleId: String) {
+        AndroidAlarmSink(context).cancel(requestCodeFor(ruleId))
     }
 }

@@ -74,12 +74,19 @@ android {
         // (a long date no longer runs into its label on a 360 dp phone). Code 4 is free
         // here: Play is a different package and has never been released.
         //
+        // Sovereign 1.0.4 (code 5), October 2026: alarms that are harder to lose (EclipseTracker
+        // fix B as ported to SunApp 1.1.4: a backup ring when Android will not let the service
+        // ring, the Android 12 backstop, the ring screen from the app, one tone at a time, the
+        // tone looping on Android 7 and 8) and the moon calendar the website fixed with it (the
+        // next new and full moon on the right day, the transit as the culmination, one transit
+        // alarm per transit). See fastlane changelogs/5.txt.
+        //
         // Play 1.1.0 (code 4): RESERVED, not yet released. Play comes second, and the rule
         // from UsernameGenerator holds here too: every Play upload must be built from a
         // sovereign tag that already shipped, same code, different application ID and
         // different signature. Never respin Play from an untagged tree.
-        versionCode = if (playBuild) 4 else 4
-        versionName = if (playBuild) "1.1.0" else "1.0.3"
+        versionCode = if (playBuild) 4 else 5
+        versionName = if (playBuild) "1.1.0" else "1.0.4"
 
         vectorDrawables.generatedDensities()
 

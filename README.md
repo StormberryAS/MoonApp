@@ -16,6 +16,8 @@ MoonApp ships in two distinct package editions:
 * **Google Play Store Build:** `no.stormberry.moonapp.play`  
   Separate package name specifically for Google Play distribution (`-PplayBuild=true`).
 
+Every released version, and what changed in it, is in [CHANGELOG.md](CHANGELOG.md).
+
 ---
 
 ## Features
@@ -37,6 +39,7 @@ MoonApp ships in two distinct package editions:
   * **Full Moon & New Moon Night Alarms:** Automatic alerts on lunation nights.
 * **Daily Auto-Recompute:** Recalculates exact alarm trigger timestamps every day as the moon's schedule shifts (~50 mins per day).
 * **System Event Recovery:** Automatically re-arms alarms on device reboot (`BOOT_COMPLETED`), timezone change, or clock adjustment.
+* **Alarms that are hard to lose:** an alarm rings even with MoonApp's notifications switched off or turned down, and opening MoonApp then shows the screen that stops it; the alarms screen says which Android setting is limiting them. On Android 12 with exact alarms switched off, alarms still ring, perhaps late, through a backup notification with the phone's alarm sound. If notifications are also off, the alarm cannot sound until they are on again. One alarm rings at a time, and setting the clock back does not ring the same alarm twice.
 
 ---
 
@@ -52,7 +55,7 @@ MoonApp ships in two distinct package editions:
 | `VIBRATE` | Haptic feedback during alarm ringing |
 | `USE_FULL_SCREEN_INTENT` | Displays full-screen ring activity over lock screen |
 | `FOREGROUND_SERVICE` | Keeps alarm audio service running without OS termination |
-| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Android 14+ media playback foreground service type |
+| `FOREGROUND_SERVICE_SYSTEM_EXEMPTED` | Android 14+ foreground service type for an alarm clock |
 
 > **Sovereign Privacy Guarantee:** `INTERNET`, `ACCESS_FINE_LOCATION`, and `ACCESS_COARSE_LOCATION` are explicitly removed from `moonapp.apk`.
 
@@ -68,6 +71,9 @@ MoonApp ships in two distinct package editions:
   side is held to the library by golden corpora written from `suncalc.js` itself
   (`MoonCalcGoldenTest`, `MoonTimesGoldenTest`, and `MoonTimesWebParityTest` for the page's
   city-local day), and `tools/gen-*.ts --check` proves the corpora still match the vendored file.
+  The next new and full moon, the lunar transit, the polar day labels and city search
+  are also held to the page itself, by corpora written from the compiled `app.js`
+  (`LunationParityTest`, `TransitParityTest`, `LunarDayKindParityTest`, `CitySearchParityTest`).
 
 ---
 
@@ -88,10 +94,12 @@ tools/build-ts.sh            # npm ci (frozen, install scripts off), type-check,
 tools/build-ts.sh --check    # change nothing; fail if app.js or a stamp is stale, the city data disagree,
                              # or an Android test corpus is not what its generator writes
 npm test                     # unit tests: page helpers, city search, golden corpora, city parity, the TypeScript rule
-npm run smoke                # the page in headless Chromium, against snapshots captured from the 90d11dd page
+npm run smoke                # the page in headless Chromium, against snapshots of the 90d11dd page with its fixes
 node tools/gen-golden.ts [--check]             # (re)write the Android illumination corpus
 node tools/gen-moontimes-golden.ts [--check]   # (re)write the Android moonrise and moonset corpus (UTC day)
 node tools/gen-webparity-golden.ts [--check]   # (re)write the corpus of the page's city-local day
+node tools/gen-lunar-parity.ts [--check]       # (re)write the page's lunation, transit and polar-day corpora
+node tools/gen-search-parity.ts [--check]      # (re)write the page's city search corpus
 ```
 
 `package.json`, `package-lock.json`, `.npmrc`, `tsconfig.json`, `ts/`, `tests/`, `tools/` and

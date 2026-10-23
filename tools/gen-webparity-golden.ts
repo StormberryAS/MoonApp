@@ -31,8 +31,8 @@
  * THE DAY (23 October 2026, fix F-5). Until then the window started at the zone's offset at 12:00
  * UTC applied to midnight and always ran 24 hours, so on a day the zone changes its offset it
  * started an hour off and missed or repeated an hour. It is now the local day from its first
- * instant to the next day's (23 or 25 hours on those days). None of the 81 rows falls on such a
- * day, so none of them changed. The flag column (alwaysUp or alwaysDown, from the sign of the last parabola
+ * instant to the next day's (23 or 25 hours on those days), and the corpus gained ten rows on such
+ * days (DST_ROWS). The 81 earlier rows are unchanged, byte for byte. The flag column (alwaysUp or alwaysDown, from the sign of the last parabola
  * vertex, as getMoonTimes sets it) is this corpus's own and is not what the page shows.
  *
  * Usage, from anywhere (Node 24 runs the TypeScript directly):
@@ -148,6 +148,21 @@ const DAYS = [
   '2026-01-15', '2026-02-28', '2026-03-21', '2026-05-09', '2026-06-21',
   '2026-09-04', '2026-09-18', '2026-11-02', '2026-12-21',
 ] as const;
+/** Days on which the zone changes its offset (F-5): spring forward and fall back in Bergen,
+    Sydney and New York in 2026, and Santiago, which moves its clocks at midnight. */
+const DST_ROWS: ReadonlyArray<readonly [string, number, number, string, string]> = [
+  ['Bergen', 60.3913, 5.3221, 'Europe/Oslo', '2026-03-29'],
+  ['Bergen', 60.3913, 5.3221, 'Europe/Oslo', '2026-10-25'],
+  ['Sydney', -33.8688, 151.2093, 'Australia/Sydney', '2026-04-05'],
+  ['Sydney', -33.8688, 151.2093, 'Australia/Sydney', '2026-10-04'],
+  ['NewYork', 40.7128, -74.006, 'America/New_York', '2026-03-08'],
+  ['NewYork', 40.7128, -74.006, 'America/New_York', '2026-11-01'],
+  ['Santiago', -33.4489, -70.6693, 'America/Santiago', '2026-04-05'],
+  ['Santiago', -33.4489, -70.6693, 'America/Santiago', '2026-04-04'],
+  ['Santiago', -33.4489, -70.6693, 'America/Santiago', '2026-09-06'],
+  ['Tromso', 69.6492, 18.9553, 'Europe/Oslo', '2026-10-25'],
+];
+
 function build(): { csv: string; count: number } {
   const rows = [
     '# Golden moonrise/moonset AS THE WEBSITE COMPUTES THEM (city-local day window).',
@@ -164,6 +179,7 @@ function build(): { csv: string; count: number } {
     rows.push(`${name},${lat},${lon},${tz},${day},${iso(t.rise)},${iso(t.set)},${flag}`);
   };
   for (const [name, lat, lon, tz] of PLACES) for (const day of DAYS) row(name, lat, lon, tz, day);
+  for (const [name, lat, lon, tz, day] of DST_ROWS) row(name, lat, lon, tz, day);
   return { csv: rows.join('\n') + '\n', count: rows.length - 3 };
 }
 
