@@ -359,27 +359,6 @@ async function onCalculate(): Promise<void> {
     showLoading(false);
   }
 
-  /* Offset of an IANA zone from UTC, in milliseconds, at a given instant. Uses Intl so it
-     honours daylight saving rather than assuming a fixed offset. */
-  function cityUtcOffsetMs(ianaId: string, at: Date): number {
-    try {
-      const dtf = new Intl.DateTimeFormat('en-US', {
-        timeZone: ianaId, hour12: false,
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-      });
-      const p: Record<string, string> = {};
-      for (const { type, value } of dtf.formatToParts(at)) p[type] = value;
-      /* formatToParts with these options always gives all six parts. If one were missing, +p.x
-         would be NaN exactly as in the JavaScript; the casts emit nothing. */
-      const asUtc = Date.UTC(+(p.year as string), +(p.month as string) - 1, +(p.day as string),
-        +(p.hour as string), +(p.minute as string), +(p.second as string));
-      return asUtc - Math.floor(at.getTime() / 1000) * 1000;
-    } catch (e) {
-      return 0;   /* unknown zone: fall back to a UTC day rather than throwing */
-    }
-  }
-
   /* Parse date: use UTC noon so SunCalc gets the correct calendar day */
   const [year, month, day] = els.dateInput.value.split('-').map(Number);
   if (!year || !month || !day) { showError('Please select a valid date.'); return; }
@@ -394,9 +373,28 @@ async function onCalculate(): Promise<void> {
      disagreed: with a browser on Europe/Oslo, 96 of 561 moonrise rows differed from the
      Android app and 22 differed by a full calendar day, and a Bergen date could show no
      moonrise at all to a visitor on UTC. Anchor on the selected city's midnight instead,
-     expressed as an instant, so the answer matches the label. Fixed 2026-09-04. */
-  const tzOffsetMs = cityUtcOffsetMs(tz, dateForCalc);
-  const cityMidnightUtc = new Date(Date.UTC(year, month - 1, day) - tzOffsetMs);
+     expressed as an instant, so the answer matches the label. Fixed 2026-09-04.
+     Until 23 October 2026 (F-5) that midnight was found with the zone's offset at 12:00 UTC,
+     and the window was always 24 hours long. On a day the zone changes its offset the window
+     therefore started an hour off (at 23:00 the evening before on a spring-forward day, at 01:00
+     on a fall-back day) and did not end at the next midnight: in Bergen on 25 October 2026 the
+     moon culminates at 00:20:13, which fell in neither day's window, so both days showed the
+     dash, and moonrise and moonset were searched over the wrong hours. Now the window is the
+     local day itself, from its first instant to the first instant of the next day (23 or 25
+     hours on those days), as the Android app's date.atStartOfDay(zone) gives it. */
+  const dayWindow = localDayWindow(year, month, day, tz);
+  const cityMidnightUtc = dayWindow.start;
+  const windowHours = (dayWindow.end.getTime() - cityMidnightUtc.getTime()) / 3600000;
+  /* A date the zone skipped altogether has an empty window: Pacific/Apia went from 29 to
+     31 December 2011, so the 30th starts and ends at the same instant (as java.time's
+     atStartOfDay gives it). Searching nothing would show Always Up or Always Down beside a
+     dash, a card that contradicts itself; 90d11dd searched 24 hours and showed another day's
+     times under this label. Say what happened instead, as the Android app does (23 October
+     2026, fix round 2). */
+  if (windowHours <= 0) {
+    showError('This date did not happen here: the clocks in ' + tz + ' skipped it. Please select another date.');
+    return;
+  }
   /* NOT SunCalc.getMoonTimes. The 2026-09-04 fix above anchored the window on the city's
      local midnight and then handed that instant to getMoonTimes, which opens with
 
@@ -408,7 +406,7 @@ async function onCalculate(): Promise<void> {
      the one that was right. moonTimesFrom is getMoonTimes' own hourly search with the
      truncation removed, so the window really does start where it is told to. Fixed
      2026-09-05. */
-  const moonTimes    = moonTimesFrom(cityMidnightUtc, lat, lon);
+  const moonTimes    = moonTimesFrom(cityMidnightUtc, lat, lon, windowHours);
   const moonriseValid = moonTimes.rise instanceof Date && !isNaN(moonTimes.rise.getTime());
   const moonsetValid  = moonTimes.set  instanceof Date && !isNaN(moonTimes.set.getTime());
   /* DO NOT TRUST suncalc's alwaysUp/alwaysDown flags. Its sign test reads a parabola
@@ -417,22 +415,29 @@ async function onCalculate(): Promise<void> {
      12.2 per cent, worst at Tromso and Longyearbyen. Telling a Norwegian visitor the moon is
      down all day when it is up all day is the opposite of the truth, not a rounding error.
      Decide from the moon's own altitude instead, which is a direct measurement. The Android
-     app does the same in MoonCalc.dayKind. Fixed 2026-09-04. */
+     app does the same in MoonCalc.dayKind. Fixed 2026-09-04.
+     "Up" means above the same threshold moonTimesFrom calls a rise: the centre 0.133 degrees
+     above the horizon (MOON_RISE_ALTITUDE). Until 22 October 2026 this tested peak > 0, so a moon
+     whose centre peaked between 0 and 0.133 degrees was labelled Always Up although by this
+     page's own definition it never rose: 22 of 6,274 such days in a 2026 sweep (F-3). */
   let alwaysUp = false, alwaysDown = false;
   if (!moonriseValid && !moonsetValid) {
     let peak = -Infinity;
-    for (let i = 0; i <= 96; i++) {
+    for (let i = 0; i <= windowHours * 4; i++) {
       const a = SunCalc.getMoonPosition(new Date(cityMidnightUtc.getTime() + i * 900000), lat, lon).altitude;
       if (a > peak) peak = a;
     }
-    alwaysUp = peak > 0;
+    alwaysUp = peak > MOON_RISE_ALTITUDE;
     alwaysDown = !alwaysUp;
   }
   const moonriseStr   = moonriseValid ? formatTime(moonTimes.rise as Date, tz) : null;
   const moonsetStr    = moonsetValid  ? formatTime(moonTimes.set as Date,  tz) : null;
 
-  /* Lunar transit (highest point in sky) */
-  const transitStr = findLunarTransit(cityMidnightUtc, lat, lon, tz);
+  /* Lunar transit (highest point in sky). None on a day the moon stays down: lunarTransitFrom
+     only counts a culmination above MOON_RISE_ALTITUDE, on the same 15-minute samples as the
+     peak above, so on an Always Down day it finds none and the row shows the dash, as the
+     Android app hides it (F-3). */
+  const transitStr = findLunarTransit(cityMidnightUtc, lat, lon, tz, windowHours);
 
   /* Phase + illumination */
   const illum      = SunCalc.getMoonIllumination(dateForCalc);
@@ -443,8 +448,9 @@ async function onCalculate(): Promise<void> {
   const pos        = SunCalc.getMoonPosition(dateForCalc, lat, lon);
   const distanceKm = Math.round(pos.distance);
 
-  /* Next lunations */
-  const { nextNew, nextFull } = getNextLunations(dateForCalc);
+  /* Next lunations: the first at or after the start of the selected day, dated in the place's
+     zone (F-1, 22 October 2026). */
+  const { nextNew, nextFull } = getNextLunations(dateForCalc, tz);
 
   /* Location label */
   /* The city tab returned above unless a city is selected, and nothing in between awaits. */
@@ -548,24 +554,151 @@ function getMoonPhaseName(phase: number): string {
 }
 
 /**
- * Finds the next New Moon and Full Moon by iterating day-by-day (up to 35 days).
- * Detects phase crossings: New Moon when phase wraps ~1->0, Full Moon when ~0.5.
+ * The next New Moon and Full Moon: the first of each at or after the start of the selected day
+ * in the place's zone, dated in that zone (decision D-4). fromDate is 12:00 UTC of the selected
+ * date, tz the place's IANA zone. nextNew and nextFull are 12:00 UTC of the local date the event
+ * falls on, so formatDate prints that date; newAt and fullAt are the events themselves.
+ *
+ * Until 22 October 2026 (F-1) this sampled the phase once a day at 12:00 UTC and reported the
+ * first noon past the crossing, a UTC date: any lunation between noon and midnight UTC showed
+ * a day late, for about half of all start dates (the full moon of 1 February 2026, 17:33 UTC,
+ * showed as 2 February). Now the daily samples only bracket each crossing, phaseCrossing finds
+ * the instant, and localYmd dates it in the place's zone. The samples start two days
+ * early, at 12:00 UTC, because a zone up to 14 hours ahead of UTC (Kiritimati) begins the
+ * selected day at 10:00 UTC the day before; so an event earlier on the selected local day is
+ * found too. One that falls before that day is skipped and the search goes on to the next. The
+ * Android app does the same in MoonPhase.nextLunations, held to it by lunation-parity.csv
+ * (tools/gen-lunar-parity.ts).
+ *
+ * The dates are compared as numbers (dayKey). Until 23 October 2026 they were compared as
+ * "YYYY-MM-DD" strings, which stop sorting by date at year 10000 ("10000-01-02" sorts before
+ * "9999-12-31"), and the date field takes years up to 275760: Oslo on 31 December 9999 showed
+ * "Not found" for both, and on 20 January 10000 a new moon before the chosen day.
  */
-function getNextLunations(fromDate: Date): { nextNew: Date | null, nextFull: Date | null } {
-  let nextNew: Date | null = null;
-  let nextFull: Date | null = null;
-  let prevPhase = SunCalc.getMoonIllumination(fromDate).phase;
-  for (let d = 1; d <= 35; d++) {
-    const candidate = new Date(fromDate.getTime() + d * 86400000);
-    const currPhase  = SunCalc.getMoonIllumination(candidate).phase;
+function getNextLunations(fromDate: Date, tz: string): { nextNew: Date | null, nextFull: Date | null, newAt: Date | null, fullAt: Date | null } {
+  const DAY = 86400000;
+  const selected = dayKey(fromDate.getUTCFullYear(), fromDate.getUTCMonth() + 1, fromDate.getUTCDate());
+  const onOrAfter = (at: number): boolean => dayKey(...localYmd(new Date(at), tz)) >= selected;
+  const start = fromDate.getTime() - 2 * DAY;
+  let newAt: number | null = null;
+  let fullAt: number | null = null;
+  let prevPhase = SunCalc.getMoonIllumination(new Date(start)).phase;
+  for (let d = 1; d <= LUNATION_SEARCH_DAYS; d++) {
+    const t1 = start + d * DAY;
+    const currPhase = SunCalc.getMoonIllumination(new Date(t1)).phase;
     /* New Moon: phase wraps from >0.75 back to <0.25 */
-    if (!nextNew  && prevPhase > 0.75 && currPhase < 0.25)  nextNew  = candidate;
+    if (newAt === null && prevPhase > 0.75 && currPhase < 0.25) {
+      const at = phaseCrossing(t1 - DAY, t1, 1);
+      if (onOrAfter(at)) newAt = at;
+    }
     /* Full Moon: phase crosses 0.5 going upward */
-    if (!nextFull && prevPhase < 0.5  && currPhase >= 0.5)  nextFull = candidate;
-    if (nextNew && nextFull) break;
+    if (fullAt === null && prevPhase < 0.5 && currPhase >= 0.5) {
+      const at = phaseCrossing(t1 - DAY, t1, 0.5);
+      if (onOrAfter(at)) fullAt = at;
+    }
+    if (newAt !== null && fullAt !== null) break;
     prevPhase = currPhase;
   }
-  return { nextNew, nextFull };
+  const noonOf = (at: number | null): Date | null => {
+    if (at === null) return null;
+    const [y, m, d] = localYmd(new Date(at), tz);
+    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  };
+  return {
+    nextNew: noonOf(newAt), nextFull: noonOf(fullAt),
+    newAt: newAt === null ? null : new Date(newAt), fullAt: fullAt === null ? null : new Date(fullAt),
+  };
+}
+
+/** Daily samples getNextLunations takes, from two days before the selected one: enough for both
+    events, since a lunation is 29.53 days. */
+const LUNATION_SEARCH_DAYS = 38;
+
+/**
+ * The instant (epoch milliseconds) at which the moon's phase reaches target inside [t0, t1],
+ * by bisection: 0.5 for a full moon, 1 for a new moon (where the phase wraps from 1 to 0, so a
+ * phase below 0.5 counts as past 1). Thirty-two halvings of one day leave 0.02 ms. The Android
+ * app runs the same bisection in MoonPhase.crossing.
+ */
+function phaseCrossing(t0: number, t1: number, target: number): number {
+  const f = (t: number): number => {
+    let p = SunCalc.getMoonIllumination(new Date(t)).phase;
+    if (target === 1 && p < 0.5) p += 1;
+    return p - target;
+  };
+  let a = t0, b = t1;
+  for (let k = 0; k < 32; k++) {
+    const m = (a + b) / 2;
+    if (f(a) * f(m) <= 0) b = m; else a = m;
+  }
+  return Math.round((a + b) / 2);
+}
+
+/** The date of an instant in an IANA zone, as [year, month 1 to 12, day]; the UTC date if Intl
+    does not know the zone. */
+function localYmd(at: Date, tz: string): [number, number, number] {
+  try {
+    const p: Record<string, string> = {};
+    for (const { type, value } of new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric',
+    }).formatToParts(at)) p[type] = value;
+    return [Number(p.year), Number(p.month), Number(p.day)];
+  } catch {
+    return [at.getUTCFullYear(), at.getUTCMonth() + 1, at.getUTCDate()];
+  }
+}
+
+/** A calendar date as one number that orders as the dates do, for every year the date field
+    takes (1 to 275760). */
+function dayKey(year: number, month: number, day: number): number {
+  return (year * 100 + month) * 100 + day;
+}
+
+/** Offset of an IANA zone from UTC at an instant, in milliseconds (local time minus UTC); 0 when
+    Intl does not know the zone, so the day falls back to the UTC one. hourCycle h23 because
+    hour12: false gives "24" for midnight in some older browsers. */
+function zoneOffsetMs(tz: string, at: number): number {
+  try {
+    const p: Record<string, string> = {};
+    for (const { type, value } of new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: 'numeric', minute: 'numeric', second: 'numeric',
+    }).formatToParts(new Date(at))) p[type] = value;
+    const wall = new Date(0);
+    wall.setUTCFullYear(Number(p.year), Number(p.month) - 1, Number(p.day));
+    wall.setUTCHours(Number(p.hour), Number(p.minute), Number(p.second), 0);
+    return wall.getTime() - Math.floor(at / 1000) * 1000;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * The first instant of a local date in an IANA zone, as java.time's date.atStartOfDay(zone) gives
+ * it, which is where the Android app starts the same day (F-5, 23 October 2026). Normally the
+ * zone's midnight. The offset in force at midnight is one of the offsets a day either side; each
+ * is tried, and of those that put the instant at exactly local midnight the earlier wins (a
+ * midnight that occurs twice). When neither does, midnight is skipped by a change of offset
+ * (Santiago, Asuncion, Havana, Beirut and Cairo move their clocks at 00:00) and the day starts at
+ * the change itself, 01:00 local. day may run past the month's end; Date.UTC carries it over.
+ */
+function startOfLocalDay(year: number, month: number, day: number, tz: string): number {
+  const DAY = 86400000;
+  const wall = Date.UTC(year, month - 1, day);
+  const before = zoneOffsetMs(tz, wall - DAY), after = zoneOffsetMs(tz, wall + DAY);
+  const valid = [wall - before, wall - after].filter((t) => zoneOffsetMs(tz, t) === wall - t);
+  return valid.length ? Math.min(...valid) : wall - before;
+}
+
+/**
+ * The selected local day as a window of instants, from its first instant to the first instant of
+ * the next day: 24 hours long, except 23 on the day a zone moves its clocks forward and 25 on the
+ * day it moves them back. moonTimesFrom, lunarTransitFrom and the peak scan in onCalculate all
+ * search this window, and each day's ends where the next one's starts, so no hour is searched
+ * twice or left out.
+ */
+function localDayWindow(year: number, month: number, day: number, tz: string): { start: Date, end: Date } {
+  return { start: new Date(startOfLocalDay(year, month, day, tz)), end: new Date(startOfLocalDay(year, month, day + 1, tz)) };
 }
 
 /**
@@ -574,24 +707,27 @@ function getNextLunations(fromDate: Date): { nextNew: Date | null, nextFull: Dat
  * getMoonTimes begins `r ? a.setUTCHours(0,0,0,0) : a.setHours(0,0,0,0)`, which throws away
  * the time-of-day of the instant it is given. That makes it impossible to search a window
  * starting at a city's local midnight, which is exactly what this page needs. Everything
- * below is its own hourly search with quadratic interpolation and its 0.133 rad horizon
- * offset, lifted unchanged except that the window starts at `start`.
+ * below is its own hourly search with quadratic interpolation and its horizon offset of 0.133
+ * degrees (MOON_RISE_ALTITUDE), lifted unchanged except that the window starts at `start`.
  *
  * Kept in step with MoonCalc.times on the Android side and with
  * tools/gen-webparity-golden.ts, which generates the corpus the Kotlin is tested against
  * (tests/golden.test.ts holds this function to that corpus as well).
  *
- * start is the first instant of the 24-hour window.
+ * start is the first instant of the window and hours its length: 24 except on a day the zone
+ * changes its offset (localDayWindow). A crossing after the window's end is not counted. With
+ * 24 hours that never happens, since the last parabola ends at hour 24, so the search is
+ * getMoonTimes' own; on a 25-hour day one more parabola covers hours 24 to 26 (F-5).
  */
-function moonTimesFrom(start: Date, lat: number, lon: number): { rise?: Date, set?: Date } {
+function moonTimesFrom(start: Date, lat: number, lon: number, hours = 24): { rise?: Date, set?: Date } {
   const hoursLater = (d: Date, h: number): Date => new Date(d.valueOf() + h * 3600000);
-  const H0 = 0.133 * Math.PI / 180;
+  const H0 = MOON_RISE_ALTITUDE;
   const alt = (h: number): number => SunCalc.getMoonPosition(hoursLater(start, h), lat, lon).altitude - H0;
 
   let rise: number | undefined;
   let set: number | undefined;
   let h0 = alt(0), ye;
-  for (let i = 1; i <= 24; i += 2) {
+  for (let i = 1; i - 1 < hours; i += 2) {
     const h1 = alt(i), h2 = alt(i + 1);
     const a = (h0 + h2) / 2 - h1;
     const b = (h2 - h0) / 2;
@@ -608,8 +744,13 @@ function moonTimesFrom(start: Date, lat: number, lon: number): { rise?: Date, se
       if (Math.abs(x2) <= 1) roots++;
       if (x1 < -1) x1 = x2;
     }
-    if (roots === 1) { if (h0 < 0) rise = i + x1; else set = i + x1; }
-    else if (roots === 2) { rise = i + (ye < 0 ? x2 : x1); set = i + (ye < 0 ? x1 : x2); }
+    const inWindow = (x: number): boolean => i + x <= hours;
+    if (roots === 1) { if (inWindow(x1)) { if (h0 < 0) rise = i + x1; else set = i + x1; } }
+    else if (roots === 2) {
+      const r = ye < 0 ? x2 : x1, s = ye < 0 ? x1 : x2;
+      if (inWindow(r)) rise = i + r;
+      if (inWindow(s)) set = i + s;
+    }
     if (rise && set) break;
     h0 = h2;
   }
@@ -620,24 +761,71 @@ function moonTimesFrom(start: Date, lat: number, lon: number): { rise?: Date, se
 }
 
 /**
- * Finds the Lunar Transit time (highest altitude) by sampling every 15 minutes.
- * Returns a formatted time string in the target timezone, or null if below horizon.
+ * The altitude of the moon's centre, in radians, at which suncalc's getMoonTimes (and so
+ * moonTimesFrom) calls it risen: 0.133 degrees, for the moon's apparent radius and refraction.
  */
-function findLunarTransit(dayStart: Date, lat: number, lon: number, tz: string): string | null {
-  /* dayStart is the CITY'S local midnight as an instant, the same window the rise and set
-     search uses. It used to rebuild UTC midnight from the passed date, so the transit was
-     computed over a different 24 hours than the two rows beside it and could name a peak
-     belonging to the wrong day. Fixed 2026-09-05. */
-  let peakTime: Date | null = null;
-  let peakAlt = -Infinity;
+const MOON_RISE_ALTITUDE = 0.133 * Math.PI / 180;
+
+/**
+ * The Lunar Transit (highest altitude) in the hours from dayStart, formatted "HH:MM:SS" in the
+ * target zone; null if the moon does not culminate above MOON_RISE_ALTITUDE inside the window.
+ */
+function findLunarTransit(dayStart: Date, lat: number, lon: number, tz: string, hours: number): string | null {
+  const at = lunarTransitFrom(dayStart, lat, lon, hours);
+  return at ? formatTime(at, tz) : null;
+}
+
+/**
+ * The instant of the Lunar Transit in the hours (24 unless given) from dayStart, or null.
+ *
+ * dayStart is the CITY'S local midnight as an instant, the same window the rise and set search
+ * uses. It used to rebuild UTC midnight from the passed date, so the transit was computed over
+ * a different 24 hours than the two rows beside it and could name a peak belonging to the wrong
+ * day. Fixed 2026-09-05.
+ *
+ * F-2 (22 October 2026). Until then the page printed the highest of the 97 samples, to the
+ * second: up to 7.5 minutes off, and up to 7.5 minutes from the Android app, which refines. And
+ * the highest sample is not always the culmination: a lunar day is about 24 h 50 min, so about
+ * once a month the moon does not culminate inside a given day at all, and on other days the
+ * declination moves enough that the moon is higher at one end of the window than at its
+ * culmination; on all those days the page named midnight as the transit.
+ *
+ * Now the transit is the culmination itself: a sample higher than the one before it (or equal)
+ * and the one after it, refined with the vertex of the parabola through the three. The samples
+ * run one step past each end of the window, so a culmination within minutes of midnight is
+ * found from the same three instants by the windows on both sides of it, and the half-open
+ * window [start, end) gives it to exactly one of them. That holds because each day's window ends
+ * where the next one starts, which is true since F-5 (23 October 2026) also on the days a zone
+ * changes its offset (localDayWindow); before, those days' windows overlapped or left an hour
+ * out. A day with no culmination inside it has no transit and the row shows the dash (decision
+ * D-5). So does a culmination at or below MOON_RISE_ALTITUDE, the height the page calls a rise:
+ * until 23 October 2026 any culmination above 0 counted, so on the few days the moon peaked
+ * between 0 and 0.133 degrees the card said Always Down and the Android alarm still rang for a
+ * transit (69 N, 0 E on 9 February 2026). The result is truncated to whole seconds.
+ * MoonCalc.transitFrom on Android is the same algorithm, held to this one by
+ * transit-parity.csv.
+ */
+function lunarTransitFrom(dayStart: Date, lat: number, lon: number, hours = 24): Date | null {
   const STEP_MS = 15 * 60 * 1000; /* 15-minute intervals */
-  for (let i = 0; i <= 96; i++) {  /* 96 = 24 hours * 4 samples/hour */
-    const t   = new Date(dayStart.getTime() + i * STEP_MS);
-    const pos = SunCalc.getMoonPosition(t, lat, lon);
-    if (pos.altitude > peakAlt) { peakAlt = pos.altitude; peakTime = t; }
+  const STEPS = hours * 4;        /* samples per window: 96 for 24 hours */
+  const LAST = Math.ceil(STEPS);
+  /* alts[i + 1] is the altitude at sample i, for i from -1 to LAST + 1. */
+  const alts: number[] = [];
+  for (let i = -1; i <= LAST + 1; i++) {
+    alts.push(SunCalc.getMoonPosition(new Date(dayStart.getTime() + i * STEP_MS), lat, lon).altitude);
   }
-  if (!peakTime || peakAlt < 0) return null;
-  return formatTime(peakTime, tz);
+  const at = (i: number): number => alts[i + 1] as number;
+  let peak = NaN, peakAlt = -Infinity;
+  for (let i = 0; i <= LAST; i++) {
+    if (!(at(i) >= at(i - 1) && at(i) > at(i + 1)) || at(i) <= MOON_RISE_ALTITUDE || at(i) <= peakAlt) continue;
+    const denom = at(i - 1) - 2 * at(i) + at(i + 1);
+    const off = denom < 0 ? 0.5 * (at(i - 1) - at(i + 1)) / denom : 0;
+    const v = off > -1 && off < 1 ? i + off : i;
+    if (v < 0 || v >= STEPS) continue;
+    peak = v; peakAlt = at(i);
+  }
+  if (Number.isNaN(peak)) return null;
+  return new Date(dayStart.getTime() + Math.trunc(peak * 15 * 60) * 1000);
 }
 
 /* ================================================================

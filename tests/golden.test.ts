@@ -1,10 +1,12 @@
-// The parity contracts with the Android port: the three corpora are what the vendored suncalc.js
-// gives (tools/gen-*.ts --check), the web catalogue and the Android asset are the same data
+// The parity contracts with the Android port: the three suncalc corpora are what the vendored
+// suncalc.js gives and the three F-1 to F-5 corpora what the compiled page gives (tools/gen-*.ts
+// --check), the web catalogue and the Android asset are the same data
 // (tools/check-city-parity.py), and the page itself computes what webparity-golden.csv says for
 // every one of its 81 rows: to the millisecond through its own moonTimesFrom, and to the second on
 // screen through onCalculate. Added 22 October 2026 with the TypeScript move, on SunApp's
-// tests/golden.test.ts. The generators keep their own copy of the page's moonTimesFrom and
-// cityUtcOffsetMs; this file is what keeps the copies and the page from drifting apart.
+// tests/golden.test.ts. gen-webparity-golden.ts keeps its own copy of the page's moonTimesFrom
+// and finds the local day its own way; this file is what keeps the copy and the page from
+// drifting apart.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,6 +30,13 @@ test('webparity-golden.csv is exactly what tools/gen-webparity-golden.ts writes 
   assert.match(gen('gen-webparity-golden'), /golden check OK: .* 81 data rows/);
 });
 
+test('the F-1 to F-5 parity corpora are exactly what tools/gen-lunar-parity.ts writes from the page', () => {
+  const out = gen('gen-lunar-parity');
+  assert.match(out, /golden check OK: .*lunation-parity\.csv matches, 487 data rows/);
+  assert.match(out, /golden check OK: .*transit-parity\.csv matches, 820 data rows/);
+  assert.match(out, /golden check OK: .*lunar-daykind-parity\.csv matches, 355 data rows/);
+});
+
 test('cities.js and data/cities.tsv hold the same catalogue', () => {
   const out = execFileSync('python3', ['-I', `${root}tools/check-city-parity.py`], { encoding: 'utf8' });
   assert.match(out, /^city parity OK: 25007 rows/);
@@ -44,25 +53,17 @@ const parityRows = (): ParityRow[] => {
   });
 };
 
-/** The city's local midnight of date as an instant: the page's cityUtcOffsetMs, restated. */
-const cityMidnight = (tz: string, date: string): number => {
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
-  const noon = new Date(Date.UTC(y, m - 1, d, 12));
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
-    timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).formatToParts(noon).map((x) => [x.type, x.value]));
-  const off = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour), Number(p.minute), Number(p.second)) - Math.floor(noon.getTime() / 1000) * 1000;
-  return Date.UTC(y, m - 1, d) - off;
-};
-
 test("the page's moonTimesFrom gives webparity-golden.csv's instants for all 81 rows", () => {
   const rows = parityRows();
   assert.equal(rows.length, 81);
-  const moonTimesFrom = loadPage().fn('moonTimesFrom');
+  const page = loadPage();
+  const moonTimesFrom = page.fn('moonTimesFrom'), localDayWindow = page.fn('localDayWindow');
   const iso = (ms: number | null): string => (ms === null ? '' : new Date(ms).toISOString().replace('.000', ''));
   const bad: string[] = [];
   for (const r of rows) {
-    const t = moonTimesFrom(new Date(cityMidnight(r.tz, r.date)), r.lat, r.lon);
+    const [y, m, d] = r.date.split('-').map(Number) as [number, number, number];
+    const day = localDayWindow(y, m, d, r.tz);
+    const t = moonTimesFrom(day.start, r.lat, r.lon, (day.end.getTime() - day.start.getTime()) / 3600000);
     const rise = iso(t.rise ? t.rise.getTime() : null), set = iso(t.set ? t.set.getTime() : null);
     if (rise !== r.rise || set !== r.set) bad.push(`${r.place} ${r.date}: page ${rise} ${set}, csv ${r.rise} ${r.set}`);
   }

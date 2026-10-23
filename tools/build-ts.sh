@@ -7,8 +7,8 @@
 # suncalc.js, cities.js and app.js as classic scripts sharing one global scope), no DOM-free core of
 # its own (its maths is the vendored suncalc.js), no generated data step and no script injected into
 # the Android app (the app is native Kotlin with no WebView). One addition: --check also runs the
-# three corpus generators (tools/gen-*.ts --check), so a CSV the Android tests read can never drift
-# from the suncalc.js the page ships.
+# corpus generators (tools/gen-*.ts --check), so a CSV the Android tests read can never drift
+# from the suncalc.js and the page code the site ships.
 #
 #   tools/build-ts.sh           install the pinned compiler, compile every ts/**/*.ts (the .d.ts
 #                               declarations aside) into the .js of the same path at the repository

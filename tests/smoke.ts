@@ -6,11 +6,14 @@
 //
 // Checks: every scenario of tests/scenarios.ts gives, step for step, the snapshot frozen in
 // tests/page-vectors.json, which was captured from the MoonApp 90d11dd page (the last hand-written
-// app.js), so the TypeScript page behaves as 90d11dd did; no request leaves the origin, and no
+// app.js) and captured again once fixes F-1 to F-3 and F-5 had changed results on purpose (every changed
+// field reviewed), so the page behaves as 90d11dd did apart from those fixes; no request leaves the
+// origin, and no
 // console error or policy violation under the zone's header; the compiled app.js is what is served,
 // under its current stamp; the sources and tooling are not served; the real dropdown lists what
 // tests/search-vectors.json says for 20 of its queries; the page shows
-// webparity-golden.csv's moonrise and moonset for all 81 rows, in the browser; no sideways scroll at
+// webparity-golden.csv's moonrise and moonset for all 81 rows, and transit-parity.csv's transits and
+// lunar-daykind-parity.csv's labels for every row, in the browser; no sideways scroll at
 // 320, 390 and 1280 px with a result shown or the city list open. Prints one line per check and
 // exits 1 on the first failure.
 
@@ -68,16 +71,16 @@ function quiet(p: Page, where: string): void {
   assert.deepEqual(p.log.csp, [], `${where}: policy violations`);
 }
 
-await check('the page as 90d11dd left it: every scenario step gives its frozen snapshot', async () => {
+await check('the page as 90d11dd left it, with fixes F-1 to F-3 and F-5: every scenario step gives its frozen snapshot', async () => {
   const frozen = JSON.parse(read('tests/page-vectors.json')) as { capturedFrom: string; vectors: Vector[] };
-  assert.match(frozen.capturedFrom, /^MoonApp 90d11dd /);
+  assert.match(frozen.capturedFrom, /^MoonApp 90d11dd with fixes F-1 to F-3 and F-5 /);
   const now = await runScenarios(browser, base, { after: (p, sc) => quiet(p, sc) });
   assert.deepEqual(now.map((v) => v.name), frozen.vectors.map((v) => v.name), 'the same steps, in the same order');
   const diffs: string[] = [];
   now.forEach((v, i) => {
     const want: Snap = defined(frozen.vectors[i], `vector ${i}`).snap;
     for (const k of new Set([...Object.keys(want), ...Object.keys(v.snap)])) {
-      if (want[k] !== v.snap[k]) diffs.push(`${v.name}: ${k}\n      90d11dd: ${JSON.stringify(want[k])}\n      now:     ${JSON.stringify(v.snap[k])}`);
+      if (want[k] !== v.snap[k]) diffs.push(`${v.name}: ${k}\n      frozen: ${JSON.stringify(want[k])}\n      now:    ${JSON.stringify(v.snap[k])}`);
     }
   });
   assert.deepEqual(diffs, [], `${diffs.length} differences`);
@@ -98,7 +101,8 @@ await check('sources, tooling and tests are not served; the site is', async () =
     'tests/serve.py', 'tools/build-ts.sh', 'tools/gen-golden.ts', 'tools/gen-moontimes-golden.ts', 'tools/gen-webparity-golden.ts', 'tools/check-city-parity.py',
     'package.json', 'package-lock.json', 'tsconfig.json', '.npmrc', '.gitattributes', 'node_modules/typescript/package.json', 'bump_assets.py', 'README.md',
     'android/gradlew', 'android/app/build.gradle.kts', 'fastlane/metadata/android/en-US/full_description.txt', 'zapstore.yaml', 'DISCLAIMER.md', 'LICENSE',
-    'jsconfig.json', 'types/app.d.ts'];
+    'jsconfig.json', 'types/app.d.ts', 'tools/gen-lunar-parity.ts', 'data/cities.tsv',
+    'android/app/src/test/resources/transit-parity.csv'];
   for (const path of hidden) assert.equal((await fetch(`${base}${path}`)).status, 404, `${path} is not served`);
   for (const path of ['', 'index.html', 'app.js', 'cities.js', 'suncalc.js', 'style.css', 'disclaimer.html', 'favicon.svg', 'fonts/inter/inter.css', 'apple-touch-icon.png']) {
     assert.equal((await fetch(`${base}${path}`)).status, 200, `${path || '/'} is served`);
@@ -151,6 +155,46 @@ await check('the page shows webparity-golden.csv\'s moonrise and moonset for all
   });
   assert.deepEqual(bad, []);
   quiet(p, 'web parity');
+  await p.close();
+});
+
+await check('the page shows transit-parity.csv\'s transits and lunar-daykind-parity.csv\'s labels for every row, in the browser', async () => {
+  const rows = (f: string): string[][] => read(`android/app/src/test/resources/${f}`).split('\n').filter((l) => l && !l.startsWith('#')).map((l) => l.split(','));
+  const transits = rows('transit-parity.csv');
+  const kinds = rows('lunar-daykind-parity.csv');
+  assert.equal(transits.length, 820);
+  assert.equal(kinds.length, 355);
+  const p = await openPage(browser, base, { timezone: 'Europe/Oslo', init: clockAt(NOW) });
+  const got: { transits: string[][]; kinds: string[] } = await p.ev(`(async () => {
+    const show = async (place, lat, lon, tz, date) => {
+      state.tab = 'city';
+      state.city = { name: place, fold: '', country: 'Test', cfold: '', lat: Number(lat), lon: Number(lon), tz, alt: '' };
+      els.dateInput.value = date;
+      await onCalculate();
+    };
+    const transits = [], kinds = [];
+    for (const [place, lat, lon, tz, date] of ${JSON.stringify(transits)}) { await show(place, lat, lon, tz, date); transits.push([els.resTransit.textContent, els.resMoonrise.textContent]); }
+    for (const [place, lat, lon, tz, date] of ${JSON.stringify(kinds)}) {
+      await show(place, lat, lon, tz, date);
+      const h = els.resMoonrise.textContent;
+      kinds.push(/Always Up/.test(h) ? 'ALWAYS_UP' : /Always Down/.test(h) ? 'ALWAYS_DOWN' : 'NORMAL');
+    }
+    return { transits, kinds };
+  })()`);
+  const hms = (iso: string, tz: string): string => new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: tz }).format(new Date(iso));
+  const bad: string[] = [];
+  transits.forEach((r, i) => {
+    const [place, , , tz, date, , , at] = r as [string, string, string, string, string, string, string, string];
+    // A blank transit shows the dash. A day the card labels Always Down never has a transit (F-3):
+    // only a culmination above the rise threshold counts.
+    const [shown, rise] = defined(got.transits[i], `row ${i}`) as [string, string];
+    const want = at ? hms(at, tz) : String.fromCharCode(0x2014);
+    if (shown !== want) bad.push(`${place} ${date} transit: page ${shown}, csv ${want}`);
+    if (at && /Always Down/.test(rise)) bad.push(`${place} ${date}: a transit on an Always Down day`);
+  });
+  kinds.forEach((r, i) => { if (got.kinds[i] !== r[5]) bad.push(`${r[0]} ${r[4]} kind: page ${got.kinds[i]}, csv ${r[5]}`); });
+  assert.deepEqual(bad, []);
+  quiet(p, 'lunar parity');
   await p.close();
 });
 

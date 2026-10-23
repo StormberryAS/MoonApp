@@ -22,11 +22,17 @@
  * except that it starts where it is told to. That makes this corpus the definition of correct
  * rather than a mirror of either surface's current behaviour.
  *
- * cityUtcOffsetMs and moonTimesFrom are copies of the page's (ts/app.ts onCalculate and
- * moonTimesFrom). The page's cityUtcOffsetMs is nested inside onCalculate and cannot be called
- * from here, so tests/golden.test.ts closes the gap from the other side: for every row it calls the
- * compiled page's own moonTimesFrom and requires the same instants, so the two copies cannot drift
- * apart unnoticed. The flag column (alwaysUp or alwaysDown, from the sign of the last parabola
+ * moonTimesFrom is a copy of the page's (ts/app.ts). The day is found independently of the page:
+ * dayStart below bisects for the first instant whose local date is the day, where the page tries
+ * the offsets either side (localDayWindow). tests/golden.test.ts closes the gap from the other
+ * side: for every row it calls the compiled page's own localDayWindow and moonTimesFrom and
+ * requires the same instants, so the copy and the page cannot drift apart unnoticed.
+ *
+ * THE DAY (23 October 2026, fix F-5). Until then the window started at the zone's offset at 12:00
+ * UTC applied to midnight and always ran 24 hours, so on a day the zone changes its offset it
+ * started an hour off and missed or repeated an hour. It is now the local day from its first
+ * instant to the next day's (23 or 25 hours on those days). None of the 81 rows falls on such a
+ * day, so none of them changed. The flag column (alwaysUp or alwaysDown, from the sign of the last parabola
  * vertex, as getMoonTimes sets it) is this corpus's own and is not what the page shows.
  *
  * Usage, from anywhere (Node 24 runs the TypeScript directly):
@@ -63,33 +69,38 @@ function loadSunCalc(): SunCalcLike {
 }
 const SunCalc = loadSunCalc();
 
-/** The page's cityUtcOffsetMs, so the corpus cannot drift from the site by construction. */
-function cityUtcOffsetMs(ianaId: string, at: Date): number {
-  try {
-    const dtf = new Intl.DateTimeFormat('en-US', {
-      timeZone: ianaId, hour12: false,
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
-    const p: Record<string, string> = {};
-    for (const { type, value } of dtf.formatToParts(at)) p[type] = value;
-    const asUtc = Date.UTC(+(p.year as string), +(p.month as string) - 1, +(p.day as string),
-      +(p.hour as string), +(p.minute as string), +(p.second as string));
-    return asUtc - Math.floor(at.getTime() / 1000) * 1000;
-  } catch { return 0; }
+/** A local date in an IANA zone as one number that orders as dates do. */
+function localKey(t: number, tz: string): number {
+  const p: Record<string, string> = {};
+  for (const { type, value } of new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(new Date(t))) p[type] = value;
+  return (Number(p.year) * 100 + Number(p.month)) * 100 + Number(p.day);
+}
+
+/** The first instant (to the second) whose local date in tz is year-month-day or later: bisected
+    between 15 hours either side of that date's midnight in UTC, which brackets every zone. */
+function dayStart(year: number, month: number, day: number, tz: string): number {
+  const wall = Date.UTC(year, month - 1, day);
+  const want = (year * 100 + month) * 100 + day;
+  let lo = wall - 15 * 3600000, hi = wall + 15 * 3600000;
+  while (hi - lo > 1000) {
+    const mid = lo + Math.floor((hi - lo) / 2000) * 1000;
+    if (localKey(mid, tz) >= want) hi = mid; else lo = mid;
+  }
+  return hi;
 }
 
 interface Times { rise?: Date; set?: Date; alwaysUp?: true; alwaysDown?: true }
 
 /**
- * SunCalc.getMoonTimes with the setUTCHours(0,0,0,0) line removed, so the 24-hour window begins
- * exactly at `start` instead of at the UTC midnight before it.
+ * SunCalc.getMoonTimes with the setUTCHours(0,0,0,0) line removed, so the window begins exactly
+ * at `start` instead of at the UTC midnight before it, and runs `hours` long (F-5): a crossing
+ * after its end is not counted, which with 24 hours never happens.
  */
-function moonTimesFrom(start: Date, lat: number, lon: number): Times {
+function moonTimesFrom(start: Date, lat: number, lon: number, hours: number): Times {
   const hoursLater = (d: Date, h: number): Date => new Date(d.valueOf() + h * 3600000);
   const alt = (h: number): number => SunCalc.getMoonPosition(hoursLater(start, h), lat, lon).altitude - 0.133 * Math.PI / 180;
   let h0 = alt(0), rise: number | undefined, set: number | undefined, ye = 0;
-  for (let i = 1; i <= 24; i += 2) {
+  for (let i = 1; i - 1 < hours; i += 2) {
     const h1 = alt(i), h2 = alt(i + 1);
     const a = (h0 + h2) / 2 - h1;
     const b = (h2 - h0) / 2;
@@ -104,8 +115,13 @@ function moonTimesFrom(start: Date, lat: number, lon: number): Times {
       if (Math.abs(x2) <= 1) roots++;
       if (x1 < -1) x1 = x2;
     }
-    if (roots === 1) { if (h0 < 0) rise = i + x1; else set = i + x1; }
-    else if (roots === 2) { rise = i + (ye < 0 ? x2 : x1); set = i + (ye < 0 ? x1 : x2); }
+    const inWindow = (x: number): boolean => i + x <= hours;
+    if (roots === 1) { if (inWindow(x1)) { if (h0 < 0) rise = i + x1; else set = i + x1; } }
+    else if (roots === 2) {
+      const r = ye < 0 ? x2 : x1, s = ye < 0 ? x1 : x2;
+      if (inWindow(r)) rise = i + r;
+      if (inWindow(s)) set = i + s;
+    }
     if (rise && set) break;
     h0 = h2;
   }
@@ -132,25 +148,22 @@ const DAYS = [
   '2026-01-15', '2026-02-28', '2026-03-21', '2026-05-09', '2026-06-21',
   '2026-09-04', '2026-09-18', '2026-11-02', '2026-12-21',
 ] as const;
-
 function build(): { csv: string; count: number } {
   const rows = [
     '# Golden moonrise/moonset AS THE WEBSITE COMPUTES THEM (city-local day window).',
-    '# Mirrors app.js:326-328. Regenerate: node tools/gen-webparity-golden.ts',
+    '# The day runs from its first instant to the next day\'s (fix F-5). Regenerate: node tools/gen-webparity-golden.ts',
     '# place,lat,lon,tz,date,rise_iso_or_blank,set_iso_or_blank,flag',
   ];
   const iso = (x: Date | undefined): string => ((x && !isNaN(x.getTime())) ? new Date(x).toISOString().replace('.000', '') : '');
-  for (const [name, lat, lon, tz] of PLACES) {
-    for (const day of DAYS) {
-      const [year, month, dayN] = day.split('-').map(Number) as [number, number, number];
-      const dateForCalc = new Date(Date.UTC(year, month - 1, dayN, 12, 0, 0));
-      const tzOffsetMs = cityUtcOffsetMs(tz, dateForCalc);
-      const cityMidnightUtc = new Date(Date.UTC(year, month - 1, dayN) - tzOffsetMs);
-      const t = moonTimesFrom(cityMidnightUtc, lat, lon);
-      const flag = t.alwaysUp ? 'alwaysUp' : t.alwaysDown ? 'alwaysDown' : '';
-      rows.push(`${name},${lat},${lon},${tz},${day},${iso(t.rise)},${iso(t.set)},${flag}`);
-    }
-  }
+  const row = (name: string, lat: number, lon: number, tz: string, day: string): void => {
+    const [year, month, dayN] = day.split('-').map(Number) as [number, number, number];
+    const start = dayStart(year, month, dayN, tz);
+    const hours = (dayStart(year, month, dayN + 1, tz) - start) / 3600000;
+    const t = moonTimesFrom(new Date(start), lat, lon, hours);
+    const flag = t.alwaysUp ? 'alwaysUp' : t.alwaysDown ? 'alwaysDown' : '';
+    rows.push(`${name},${lat},${lon},${tz},${day},${iso(t.rise)},${iso(t.set)},${flag}`);
+  };
+  for (const [name, lat, lon, tz] of PLACES) for (const day of DAYS) row(name, lat, lon, tz, day);
   return { csv: rows.join('\n') + '\n', count: rows.length - 3 };
 }
 

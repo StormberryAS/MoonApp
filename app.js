@@ -251,23 +251,6 @@ async function onCalculate() {
         }
         showLoading(false);
     }
-    function cityUtcOffsetMs(ianaId, at) {
-        try {
-            const dtf = new Intl.DateTimeFormat('en-US', {
-                timeZone: ianaId, hour12: false,
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-            });
-            const p = {};
-            for (const { type, value } of dtf.formatToParts(at))
-                p[type] = value;
-            const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
-            return asUtc - Math.floor(at.getTime() / 1000) * 1000;
-        }
-        catch (e) {
-            return 0;
-        }
-    }
     const [year, month, day] = els.dateInput.value.split('-').map(Number);
     if (!year || !month || !day) {
         showError('Please select a valid date.');
@@ -275,31 +258,36 @@ async function onCalculate() {
     }
     const dateForCalc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
     const tz = tzInfo.ianaId;
-    const tzOffsetMs = cityUtcOffsetMs(tz, dateForCalc);
-    const cityMidnightUtc = new Date(Date.UTC(year, month - 1, day) - tzOffsetMs);
-    const moonTimes = moonTimesFrom(cityMidnightUtc, lat, lon);
+    const dayWindow = localDayWindow(year, month, day, tz);
+    const cityMidnightUtc = dayWindow.start;
+    const windowHours = (dayWindow.end.getTime() - cityMidnightUtc.getTime()) / 3600000;
+    if (windowHours <= 0) {
+        showError('This date did not happen here: the clocks in ' + tz + ' skipped it. Please select another date.');
+        return;
+    }
+    const moonTimes = moonTimesFrom(cityMidnightUtc, lat, lon, windowHours);
     const moonriseValid = moonTimes.rise instanceof Date && !isNaN(moonTimes.rise.getTime());
     const moonsetValid = moonTimes.set instanceof Date && !isNaN(moonTimes.set.getTime());
     let alwaysUp = false, alwaysDown = false;
     if (!moonriseValid && !moonsetValid) {
         let peak = -Infinity;
-        for (let i = 0; i <= 96; i++) {
+        for (let i = 0; i <= windowHours * 4; i++) {
             const a = SunCalc.getMoonPosition(new Date(cityMidnightUtc.getTime() + i * 900000), lat, lon).altitude;
             if (a > peak)
                 peak = a;
         }
-        alwaysUp = peak > 0;
+        alwaysUp = peak > MOON_RISE_ALTITUDE;
         alwaysDown = !alwaysUp;
     }
     const moonriseStr = moonriseValid ? formatTime(moonTimes.rise, tz) : null;
     const moonsetStr = moonsetValid ? formatTime(moonTimes.set, tz) : null;
-    const transitStr = findLunarTransit(cityMidnightUtc, lat, lon, tz);
+    const transitStr = findLunarTransit(cityMidnightUtc, lat, lon, tz, windowHours);
     const illum = SunCalc.getMoonIllumination(dateForCalc);
     const phaseName = getMoonPhaseName(illum.phase);
     const illumPct = Math.round(illum.fraction * 100);
     const pos = SunCalc.getMoonPosition(dateForCalc, lat, lon);
     const distanceKm = Math.round(pos.distance);
-    const { nextNew, nextFull } = getNextLunations(dateForCalc);
+    const { nextNew, nextFull } = getNextLunations(dateForCalc, tz);
     const city = state.city;
     const locationLabel = state.tab === 'city'
         ? city.name + ', ' + city.country
@@ -371,31 +359,111 @@ function getMoonPhaseName(phase) {
         return 'Last Quarter';
     return 'Waning Crescent';
 }
-function getNextLunations(fromDate) {
-    let nextNew = null;
-    let nextFull = null;
-    let prevPhase = SunCalc.getMoonIllumination(fromDate).phase;
-    for (let d = 1; d <= 35; d++) {
-        const candidate = new Date(fromDate.getTime() + d * 86400000);
-        const currPhase = SunCalc.getMoonIllumination(candidate).phase;
-        if (!nextNew && prevPhase > 0.75 && currPhase < 0.25)
-            nextNew = candidate;
-        if (!nextFull && prevPhase < 0.5 && currPhase >= 0.5)
-            nextFull = candidate;
-        if (nextNew && nextFull)
+function getNextLunations(fromDate, tz) {
+    const DAY = 86400000;
+    const selected = dayKey(fromDate.getUTCFullYear(), fromDate.getUTCMonth() + 1, fromDate.getUTCDate());
+    const onOrAfter = (at) => dayKey(...localYmd(new Date(at), tz)) >= selected;
+    const start = fromDate.getTime() - 2 * DAY;
+    let newAt = null;
+    let fullAt = null;
+    let prevPhase = SunCalc.getMoonIllumination(new Date(start)).phase;
+    for (let d = 1; d <= LUNATION_SEARCH_DAYS; d++) {
+        const t1 = start + d * DAY;
+        const currPhase = SunCalc.getMoonIllumination(new Date(t1)).phase;
+        if (newAt === null && prevPhase > 0.75 && currPhase < 0.25) {
+            const at = phaseCrossing(t1 - DAY, t1, 1);
+            if (onOrAfter(at))
+                newAt = at;
+        }
+        if (fullAt === null && prevPhase < 0.5 && currPhase >= 0.5) {
+            const at = phaseCrossing(t1 - DAY, t1, 0.5);
+            if (onOrAfter(at))
+                fullAt = at;
+        }
+        if (newAt !== null && fullAt !== null)
             break;
         prevPhase = currPhase;
     }
-    return { nextNew, nextFull };
+    const noonOf = (at) => {
+        if (at === null)
+            return null;
+        const [y, m, d] = localYmd(new Date(at), tz);
+        return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    };
+    return {
+        nextNew: noonOf(newAt), nextFull: noonOf(fullAt),
+        newAt: newAt === null ? null : new Date(newAt), fullAt: fullAt === null ? null : new Date(fullAt),
+    };
 }
-function moonTimesFrom(start, lat, lon) {
+const LUNATION_SEARCH_DAYS = 38;
+function phaseCrossing(t0, t1, target) {
+    const f = (t) => {
+        let p = SunCalc.getMoonIllumination(new Date(t)).phase;
+        if (target === 1 && p < 0.5)
+            p += 1;
+        return p - target;
+    };
+    let a = t0, b = t1;
+    for (let k = 0; k < 32; k++) {
+        const m = (a + b) / 2;
+        if (f(a) * f(m) <= 0)
+            b = m;
+        else
+            a = m;
+    }
+    return Math.round((a + b) / 2);
+}
+function localYmd(at, tz) {
+    try {
+        const p = {};
+        for (const { type, value } of new Intl.DateTimeFormat('en-US', {
+            timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric',
+        }).formatToParts(at))
+            p[type] = value;
+        return [Number(p.year), Number(p.month), Number(p.day)];
+    }
+    catch {
+        return [at.getUTCFullYear(), at.getUTCMonth() + 1, at.getUTCDate()];
+    }
+}
+function dayKey(year, month, day) {
+    return (year * 100 + month) * 100 + day;
+}
+function zoneOffsetMs(tz, at) {
+    try {
+        const p = {};
+        for (const { type, value } of new Intl.DateTimeFormat('en-US', {
+            timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: 'numeric', minute: 'numeric', second: 'numeric',
+        }).formatToParts(new Date(at)))
+            p[type] = value;
+        const wall = new Date(0);
+        wall.setUTCFullYear(Number(p.year), Number(p.month) - 1, Number(p.day));
+        wall.setUTCHours(Number(p.hour), Number(p.minute), Number(p.second), 0);
+        return wall.getTime() - Math.floor(at / 1000) * 1000;
+    }
+    catch {
+        return 0;
+    }
+}
+function startOfLocalDay(year, month, day, tz) {
+    const DAY = 86400000;
+    const wall = Date.UTC(year, month - 1, day);
+    const before = zoneOffsetMs(tz, wall - DAY), after = zoneOffsetMs(tz, wall + DAY);
+    const valid = [wall - before, wall - after].filter((t) => zoneOffsetMs(tz, t) === wall - t);
+    return valid.length ? Math.min(...valid) : wall - before;
+}
+function localDayWindow(year, month, day, tz) {
+    return { start: new Date(startOfLocalDay(year, month, day, tz)), end: new Date(startOfLocalDay(year, month, day + 1, tz)) };
+}
+function moonTimesFrom(start, lat, lon, hours = 24) {
     const hoursLater = (d, h) => new Date(d.valueOf() + h * 3600000);
-    const H0 = 0.133 * Math.PI / 180;
+    const H0 = MOON_RISE_ALTITUDE;
     const alt = (h) => SunCalc.getMoonPosition(hoursLater(start, h), lat, lon).altitude - H0;
     let rise;
     let set;
     let h0 = alt(0), ye;
-    for (let i = 1; i <= 24; i += 2) {
+    for (let i = 1; i - 1 < hours; i += 2) {
         const h1 = alt(i), h2 = alt(i + 1);
         const a = (h0 + h2) / 2 - h1;
         const b = (h2 - h0) / 2;
@@ -414,15 +482,21 @@ function moonTimesFrom(start, lat, lon) {
             if (x1 < -1)
                 x1 = x2;
         }
+        const inWindow = (x) => i + x <= hours;
         if (roots === 1) {
-            if (h0 < 0)
-                rise = i + x1;
-            else
-                set = i + x1;
+            if (inWindow(x1)) {
+                if (h0 < 0)
+                    rise = i + x1;
+                else
+                    set = i + x1;
+            }
         }
         else if (roots === 2) {
-            rise = i + (ye < 0 ? x2 : x1);
-            set = i + (ye < 0 ? x1 : x2);
+            const r = ye < 0 ? x2 : x1, s = ye < 0 ? x1 : x2;
+            if (inWindow(r))
+                rise = i + r;
+            if (inWindow(s))
+                set = i + s;
         }
         if (rise && set)
             break;
@@ -435,21 +509,35 @@ function moonTimesFrom(start, lat, lon) {
         out.set = hoursLater(start, set);
     return out;
 }
-function findLunarTransit(dayStart, lat, lon, tz) {
-    let peakTime = null;
-    let peakAlt = -Infinity;
+const MOON_RISE_ALTITUDE = 0.133 * Math.PI / 180;
+function findLunarTransit(dayStart, lat, lon, tz, hours) {
+    const at = lunarTransitFrom(dayStart, lat, lon, hours);
+    return at ? formatTime(at, tz) : null;
+}
+function lunarTransitFrom(dayStart, lat, lon, hours = 24) {
     const STEP_MS = 15 * 60 * 1000;
-    for (let i = 0; i <= 96; i++) {
-        const t = new Date(dayStart.getTime() + i * STEP_MS);
-        const pos = SunCalc.getMoonPosition(t, lat, lon);
-        if (pos.altitude > peakAlt) {
-            peakAlt = pos.altitude;
-            peakTime = t;
-        }
+    const STEPS = hours * 4;
+    const LAST = Math.ceil(STEPS);
+    const alts = [];
+    for (let i = -1; i <= LAST + 1; i++) {
+        alts.push(SunCalc.getMoonPosition(new Date(dayStart.getTime() + i * STEP_MS), lat, lon).altitude);
     }
-    if (!peakTime || peakAlt < 0)
+    const at = (i) => alts[i + 1];
+    let peak = NaN, peakAlt = -Infinity;
+    for (let i = 0; i <= LAST; i++) {
+        if (!(at(i) >= at(i - 1) && at(i) > at(i + 1)) || at(i) <= MOON_RISE_ALTITUDE || at(i) <= peakAlt)
+            continue;
+        const denom = at(i - 1) - 2 * at(i) + at(i + 1);
+        const off = denom < 0 ? 0.5 * (at(i - 1) - at(i + 1)) / denom : 0;
+        const v = off > -1 && off < 1 ? i + off : i;
+        if (v < 0 || v >= STEPS)
+            continue;
+        peak = v;
+        peakAlt = at(i);
+    }
+    if (Number.isNaN(peak))
         return null;
-    return formatTime(peakTime, tz);
+    return new Date(dayStart.getTime() + Math.trunc(peak * 15 * 60) * 1000);
 }
 function drawPhaseDisc(canvas, phaseRaw, _phaseAngle) {
     const ctx = canvas.getContext('2d');

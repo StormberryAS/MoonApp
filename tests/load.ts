@@ -160,8 +160,11 @@ export interface PageCity {
  * lookup, so a parameter added or removed on one side only fails at once.
  */
 export interface PageFunctions {
-  getNextLunations(fromDate: Date): { nextNew: Date | null; nextFull: Date | null };
-  moonTimesFrom(start: Date, lat: number, lon: number): { rise?: Date; set?: Date };
+  getNextLunations(fromDate: Date, tz: string): { nextNew: Date | null; nextFull: Date | null; newAt: Date | null; fullAt: Date | null };
+  moonTimesFrom(start: Date, lat: number, lon: number, hours?: number): { rise?: Date; set?: Date };
+  lunarTransitFrom(dayStart: Date, lat: number, lon: number, hours?: number): Date | null;
+  localYmd(at: Date, tz: string): [number, number, number];
+  localDayWindow(year: number, month: number, day: number, tz: string): { start: Date; end: Date };
   formatDate(d: Date): string;
   onCalculate(): Promise<void>;
   onCityInput(): void;
@@ -171,19 +174,27 @@ export interface PageFunctions {
 
 /** Each page function's declared parameter count (Function.length), checked by fn(). */
 const PAGE_ARITY: { readonly [K in keyof PageFunctions]: number } = {
-  getNextLunations: 1,
+  getNextLunations: 2,
   moonTimesFrom: 3,
+  lunarTransitFrom: 3,
+  localYmd: 2,
+  localDayWindow: 4,
   formatDate: 1,
   onCalculate: 0,
   onCityInput: 0,
   onDropdownClick: 1,
 };
 
-/** The page's two top-level objects the tests drive: its state and its element cache. */
+/** The page's top-level objects the tests use: the vendored SunCalc (the parts read), its state
+    and its element cache. */
 export interface PageGlobals {
+  SunCalc: {
+    getMoonPosition(date: Date, lat: number, lng: number): { altitude: number; azimuth: number; distance: number };
+    getMoonIllumination(date: Date): { fraction: number; phase: number; angle: number };
+  };
   state: { tab: string; city: PageCity | null };
   /** The entries the tests read or write, each a stub element; add a name here to use another. */
-  els: Record<'dateInput' | 'resMoonrise' | 'resTransit' | 'resMoonset' | 'citySearch' | 'cityDropdown' | 'citySelectedTxt', FakeElement>;
+  els: Record<'dateInput' | 'resMoonrise' | 'resTransit' | 'resMoonset' | 'citySearch' | 'cityDropdown' | 'citySelectedTxt' | 'errorMsg' | 'resultsCard', FakeElement>;
 }
 
 /** A loaded page: run code in its global scope, and reach its stub document. */

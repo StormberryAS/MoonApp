@@ -61,7 +61,8 @@ test('every local script and stylesheet carries the ?v= stamp of its current byt
 test('_config.yml keeps sources, tooling and tests off the site, and publishes the app', () => {
   const cfg = read('_config.yml');
   const excluded = [...cfg.matchAll(/^ {2}- (\S+)$/gm)].map((m) => m[1]);
-  for (const x of ['ts/', 'tools/', 'tests/', 'node_modules/', 'package.json', 'package-lock.json', 'tsconfig.json', '.npmrc', 'bump_assets.py', 'README.md', 'DISCLAIMER.md', 'LICENSE', 'NOTICE', 'android/', 'fastlane/', 'zapstore.yaml']) {
+  // data/ since fix F-4: data/cities.tsv is the Android build input, which the page never loads.
+  for (const x of ['ts/', 'tools/', 'tests/', 'node_modules/', 'package.json', 'package-lock.json', 'tsconfig.json', '.npmrc', 'bump_assets.py', 'README.md', 'DISCLAIMER.md', 'LICENSE', 'NOTICE', 'android/', 'fastlane/', 'zapstore.yaml', 'data/']) {
     assert.ok(excluded.includes(x), `${x} is excluded`);
   }
   for (const x of ['app.js', 'cities.js', 'suncalc.js', 'index.html', 'style.css', 'disclaimer.html', 'fonts/', 'switcher-icons/']) assert.ok(!excluded.includes(x), `${x} is published`);
@@ -122,7 +123,7 @@ test('the vendored SunCalc and the generated catalogue are untouched', () => {
 });
 
 test('the generators work from the repository, not from a path under $HOME', () => {
-  for (const name of ['gen-golden', 'gen-moontimes-golden', 'gen-webparity-golden']) {
+  for (const name of ['gen-golden', 'gen-moontimes-golden', 'gen-webparity-golden', 'gen-lunar-parity']) {
     const src = read(`tools/${name}.ts`);
     assert.doesNotMatch(src, /process\.env\.HOME/, `${name}.ts reads no home path`);
     assert.match(src, /resolve\(import\.meta\.dirname, '\.\.'\)/, `${name}.ts works relative to the repository`);
@@ -157,7 +158,7 @@ test('the only JavaScript is compiled, generated or vendored, and marked so (S-1
   const generated = attr('linguist-generated', [...compiled, 'cities.js']);
   for (const f of [...compiled, 'cities.js']) assert.equal(generated.get(f), 'true', `${f} is linguist-generated`);
   assert.equal(attr('linguist-vendored', ['suncalc.js']).get('suncalc.js'), 'true', 'suncalc.js is linguist-vendored');
-  const corpora = ['mooncalc-golden.csv', 'moontimes-golden.csv', 'webparity-golden.csv'].map((f) => `android/app/src/test/resources/${f}`);
+  const corpora = ['mooncalc-golden.csv', 'moontimes-golden.csv', 'webparity-golden.csv', 'lunation-parity.csv', 'transit-parity.csv', 'lunar-daykind-parity.csv'].map((f) => `android/app/src/test/resources/${f}`);
   const genCsv = attr('linguist-generated', [...corpora, 'tests/page-vectors.json', 'tests/search-vectors.json']);
   for (const f of [...corpora, 'tests/page-vectors.json', 'tests/search-vectors.json']) assert.equal(genCsv.get(f), 'true', `${f} is linguist-generated`);
 });

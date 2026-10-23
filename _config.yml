@@ -36,3 +36,7 @@ exclude:
   - tsconfig.json
   - ts/
   - tests/
+# data/ added 22 October 2026 (F-4): data/cities.tsv is the build input the Android app bundles
+# (tools/check-city-parity.py holds it to cities.js). The page never loads it, yet it was served
+# (moon.stormberry.as/data/cities.tsv answered 200, 0.9 MB); SunApp has always excluded it.
+  - data/
