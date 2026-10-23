@@ -95,6 +95,7 @@ tools/build-ts.sh --check    # change nothing; fail if app.js or a stamp is stal
                              # or an Android test corpus is not what its generator writes
 npm test                     # unit tests: page helpers, city search, golden corpora, city parity, the TypeScript rule
 npm run smoke                # the page in headless Chromium, against snapshots of the 90d11dd page with its fixes
+npm run sw-smoke             # the offline pilot's service worker in headless Chromium, under the real host name
 node tools/gen-golden.ts [--check]             # (re)write the Android illumination corpus
 node tools/gen-moontimes-golden.ts [--check]   # (re)write the Android moonrise and moonset corpus (UTC day)
 node tools/gen-webparity-golden.ts [--check]   # (re)write the corpus of the page's city-local day
@@ -102,9 +103,12 @@ node tools/gen-lunar-parity.ts [--check]       # (re)write the page's lunation, 
 node tools/gen-search-parity.ts [--check]      # (re)write the page's city search corpus
 ```
 
-`package.json`, `package-lock.json`, `.npmrc`, `tsconfig.json`, `ts/`, `tests/`, `tools/` and
+`package.json`, `package-lock.json`, `.npmrc`, `tsconfig.json`, `tsconfig.sw.json`, `ts/`, `tests/`, `tools/` and
 `node_modules/` are development files only: `_config.yml` keeps them off the site, and the Android
 build copies only `data/cities.tsv`.
+
+### Offline pilot (iPhone Home Screen)
+A service worker (`ts/sw.ts`, compiled to `sw.js`) lets the site open with no network after one online visit, for the Home Screen web app on iPhone. It registers only on `https://moon.stormberry.as`, never on the onion mirror, on `localhost` or on any other host, and the Android app never loads the web page at all. While `OFFLINE_PILOT` in `ts/app.ts` is `'opt-in'`, only a visit to `https://moon.stormberry.as/?offline=1` installs it. Pages are fetched from the network first and fall back to the stored copy only when there is no network; scripts and stylesheets are stored under their `?v=` stamps, which `bump_assets.py` also writes into `sw.js`, so every release replaces the stored files. To switch it off, set `OFFLINE_PILOT` to `'off'` (every device drops it on its next visit) or `KILL` in `ts/sw.ts` to `true`, then build and deploy. Once the worker has shipped, never delete `sw.js` and never revert the pilot as a whole: a device keeps its worker while `sw.js` answers 404, and with `offlinePilot()` gone from `app.js` neither switch can reach it. To end the pilot, deploy `OFFLINE_PILOT = 'off'` and `KILL = true` together and keep both served for at least three months (a Home Screen app can go unopened for weeks); only then remove the code. If `sw.js` was removed by mistake, serving a `sw.js` with `KILL = true` again clears the worker at each device's next visit.
 
 ---
 

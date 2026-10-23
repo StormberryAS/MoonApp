@@ -54,6 +54,10 @@ function init() {
         if (!els.citySearch.closest('.search-wrapper').contains(e.target))
             closeDropdown();
     });
+    try {
+        offlinePilot();
+    }
+    catch { }
 }
 function onTabClick(e) {
     const btn = e.currentTarget;
@@ -643,4 +647,22 @@ function escapeHtml(str) {
 function showError(msg) { els.errorMsg.textContent = msg; els.errorMsg.removeAttribute('hidden'); els.resultsCard.setAttribute('hidden', ''); }
 function clearError() { els.errorMsg.setAttribute('hidden', ''); els.errorMsg.textContent = ''; }
 function showLoading(on) { els.loadingOverlay.hidden = !on; }
+const OFFLINE_PILOT = 'opt-in';
+function offlinePilot() {
+    if (!('serviceWorker' in navigator))
+        return;
+    if (location.protocol !== 'https:' || location.hostname !== 'moon.stormberry.as')
+        return;
+    const sw = navigator.serviceWorker;
+    if (OFFLINE_PILOT === 'off') {
+        void sw.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))
+            .then(() => caches.keys())
+            .then((ks) => Promise.all(ks.filter((k) => k.startsWith('moonapp-')).map((k) => caches.delete(k))))
+            .catch(() => undefined);
+        return;
+    }
+    if (OFFLINE_PILOT === 'opt-in' && new URLSearchParams(location.search).get('offline') !== '1' && !sw.controller)
+        return;
+    void sw.register('sw.js', { scope: './', updateViaCache: 'none' }).catch(() => undefined);
+}
 document.addEventListener('DOMContentLoaded', init);

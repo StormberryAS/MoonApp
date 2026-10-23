@@ -35,6 +35,9 @@ exclude:
   - package-lock.json
   - .npmrc
   - tsconfig.json
+# The offline pilot (ported 23 October 2026 from SunApp 88f59d4): ts/sw.ts compiles to sw.js, which IS published (the page
+# registers it); its compiler settings are not.
+  - tsconfig.sw.json
   - ts/
   - tests/
 # data/ added 22 October 2026 (F-4): data/cities.tsv is the build input the Android app bundles

@@ -97,7 +97,7 @@ await check('the compiled app.js is what is served, under its current stamp', as
 });
 
 await check('sources, tooling and tests are not served; the site is', async () => {
-  const hidden = ['ts/app.ts', 'ts/app-dom.d.ts', 'ts/cities.d.ts', 'ts/suncalc.d.ts', 'tests/smoke.ts', 'tests/page-vectors.json', 'tests/search-vectors.json',
+  const hidden = ['ts/app.ts', 'ts/sw.ts', 'tsconfig.sw.json', 'tests/sw-smoke.ts', 'tests/sw.test.ts', 'ts/app-dom.d.ts', 'ts/cities.d.ts', 'ts/suncalc.d.ts', 'tests/smoke.ts', 'tests/page-vectors.json', 'tests/search-vectors.json',
     'tests/serve.py', 'tools/build-ts.sh', 'tools/gen-golden.ts', 'tools/gen-moontimes-golden.ts', 'tools/gen-webparity-golden.ts', 'tools/check-city-parity.py',
     'package.json', 'package-lock.json', 'tsconfig.json', '.npmrc', '.gitattributes', 'node_modules/typescript/package.json', 'bump_assets.py', 'README.md',
     'android/gradlew', 'android/app/build.gradle.kts', 'fastlane/metadata/android/en-US/full_description.txt', 'zapstore.yaml', 'DISCLAIMER.md', 'LICENSE',
@@ -105,7 +105,7 @@ await check('sources, tooling and tests are not served; the site is', async () =
     'android/app/src/test/resources/transit-parity.csv',
     'tools/gen-search-parity.ts', 'android/app/src/test/resources/citysearch-golden.csv'];
   for (const path of hidden) assert.equal((await fetch(`${base}${path}`)).status, 404, `${path} is not served`);
-  for (const path of ['', 'index.html', 'app.js', 'cities.js', 'suncalc.js', 'style.css', 'disclaimer.html', 'favicon.svg', 'fonts/inter/inter.css', 'apple-touch-icon.png']) {
+  for (const path of ['', 'index.html', 'app.js', 'sw.js', 'cities.js', 'suncalc.js', 'style.css', 'disclaimer.html', 'favicon.svg', 'fonts/inter/inter.css', 'apple-touch-icon.png']) {
     assert.equal((await fetch(`${base}${path}`)).status, 200, `${path || '/'} is served`);
   }
 });

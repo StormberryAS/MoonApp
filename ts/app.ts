@@ -134,6 +134,9 @@ function init(): void {
   document.addEventListener('click', e => {
     if (!(els.citySearch.closest('.search-wrapper') as Element).contains(e.target as Node | null)) closeDropdown();
   });
+
+  // Last, and on its own: nothing the offline pilot does can reach the calculator.
+  try { offlinePilot(); } catch { /* the page works the same without it */ }
 }
 
 /* ================================================================
@@ -994,6 +997,40 @@ function clearError(): void           { els.errorMsg.setAttribute('hidden',''); 
 function showLoading(on: boolean): void { els.loadingOverlay.hidden = !on; }
 
 /* ================================================================
-   SECTION 15: BOOTSTRAP
+   SECTION 15: OFFLINE PILOT (ported 23 October 2026 from SunApp 88f59d4)
+   Registers the service worker (ts/sw.ts, compiled to sw.js) that lets
+   the page open with no network after one visit, for the Home Screen
+   web app on iPhone. Only on https://moon.stormberry.as: never on the
+   onion mirror (another host, plain http), on file://, on localhost or
+   on any other host. The Android app never loads this page at all.
+     'opt-in'  only a visit to https://moon.stormberry.as/?offline=1
+               registers the worker; a page it already controls keeps
+               it up to date. Nobody else is affected.
+     'on'      every visit registers it.
+     'off'     kill switch: every visit unregisters it and deletes its
+               caches. Pages are network first, so this reaches every
+               device on its next online visit.
+   The page keeps no storage key of its own for this.
+================================================================ */
+// A cast, not an annotation, so the checker keeps all three values in play whichever is chosen.
+const OFFLINE_PILOT = 'opt-in' as 'off' | 'opt-in' | 'on';
+
+function offlinePilot(): void {
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol !== 'https:' || location.hostname !== 'moon.stormberry.as') return;
+  const sw = navigator.serviceWorker;
+  if (OFFLINE_PILOT === 'off') {
+    void sw.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))
+      .then(() => caches.keys())
+      .then((ks) => Promise.all(ks.filter((k) => k.startsWith('moonapp-')).map((k) => caches.delete(k))))
+      .catch(() => undefined);
+    return;
+  }
+  if (OFFLINE_PILOT === 'opt-in' && new URLSearchParams(location.search).get('offline') !== '1' && !sw.controller) return;
+  void sw.register('sw.js', { scope: './', updateViaCache: 'none' }).catch(() => undefined);
+}
+
+/* ================================================================
+   SECTION 16: BOOTSTRAP
 ================================================================ */
 document.addEventListener('DOMContentLoaded', init);
