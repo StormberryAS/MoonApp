@@ -6,7 +6,32 @@ the app store for a release is `fastlane/metadata/android/en-US/changelogs/<vers
 the full log it points to. Website changes (moon.stormberry.as) have no version number of their own; the ones
 that ship with a release are listed under it.
 
-## 1.0.4 (versionCode 5)
+## 1.0.5 (versionCode 6)
+
+A new top and bottom for the times screen, in the manner of CheckLink. Nothing else changes: the moon
+calendar, the alarms and the permissions are as in 1.0.4.
+
+Top
+- The mark, the name and the tagline are now centred, with the mark larger and glowing, and the date and
+  the moon's figures follow. The tagline is the one on moon.stormberry.as, word for word.
+
+Bottom
+- The small footer is replaced by CheckLink's: the Stormberry name and tagline, what runs on your device
+  and everything it is built on, the Stormberry icon row (LinkedIn, GitHub, Nostr, Tor), a line to test
+  the privacy claim by disconnecting, "Alarm permissions only. No internet. No tracking.", then the
+  company line with Privacy and Disclaimer, and the date of the city list.
+- The credits are in the footer itself, each with a link to its source and to its licence: SunCalc's
+  formulae (BSD 2-Clause), the Inter typeface (OFL 1.1), Android Jetpack and Kotlin (Apache 2.0),
+  Google's Java desugaring library (GPL 2 with Classpath Exception), the Lucide LinkedIn and GitHub icons
+  (ISC), and city data from GeoNames and Kartverket (CC BY 4.0). The licence texts are also in LICENSE.
+- Every link opens in your browser, or in a Nostr client for the Nostr one. If your phone has no app for a
+  link, MoonApp says so instead of closing. The app still has no INTERNET permission.
+- The footer's small print was dark blue on near black, hard to read. It is now at a readable contrast.
+
+Tests and build
+- The permissions are unchanged. A new test pins every footer link, and another keeps the tagline equal to the website's.
+
+## 1.0.4 (versionCode 5), 2026-10-23
 
 Alarms that are harder to lose, and a corrected moon calendar. Brings over the alarm fixes made in
 EclipseTracker and SunApp, adapted to MoonApp's simpler engine (no snooze, one notification), fixes three

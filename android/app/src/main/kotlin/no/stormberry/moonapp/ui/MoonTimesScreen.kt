@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import no.stormberry.moonapp.alarm.AlarmCapability
 import no.stormberry.moonapp.ui.components.AppFooter
-import no.stormberry.moonapp.ui.components.AppHeader
+import no.stormberry.moonapp.ui.components.AppHero
 import no.stormberry.moonapp.ui.components.drawSkyGlow
 import no.stormberry.moonapp.lunar.LunarDayKind
 import no.stormberry.moonapp.lunar.LunarEvent
@@ -108,10 +108,14 @@ fun MoonTimesScreen(
         modifier = modifier
             .fillMaxSize()
             .drawBehind { drawSkyGlow() },
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        // No side padding on the list itself: the footer is full width, like CheckLink's, and the
+        // other items take the 16 dp gutter from [gutter] instead.
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { AppHeader() }
+        // The hero, then the app's functions, as on CheckLink. 16 dp more under the hero, on top
+        // of the list's 16, makes the 32 dp CheckLink puts between its hero and its first card.
+        item { AppHero(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) }
 
         item {
             DateBar(
@@ -120,6 +124,7 @@ fun MoonTimesScreen(
                 onPrev = { date = date.minusDays(1) },
                 onNext = { date = date.plusDays(1) },
                 onToday = { date = LocalDate.now() },
+                modifier = gutter,
             )
         }
 
@@ -127,7 +132,7 @@ fun MoonTimesScreen(
             Card(
                 colors = CardDefaults.cardColors(containerColor = Moon.Card),
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = gutter.fillMaxWidth(),
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
@@ -161,7 +166,7 @@ fun MoonTimesScreen(
             Card(
                 colors = CardDefaults.cardColors(containerColor = Moon.Card),
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = gutter.fillMaxWidth(),
             ) {
                 Column(Modifier.padding(16.dp)) {
                     if (!occurs) {
@@ -211,6 +216,7 @@ fun MoonTimesScreen(
 
         item {
             CityPicker(
+                modifier = gutter,
                 query = query,
                 onQueryChange = { query = it },
                 latText = latText,
@@ -230,12 +236,17 @@ fun MoonTimesScreen(
             )
         }
 
+        // CheckLink's footer, edge to edge. The list's 16 dp spacing above it, and the 16 dp
+        // here, make the 32 dp CheckLink leaves between its last card and its footer.
         item {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
             AppFooter()
         }
     }
 }
+
+/** The 16 dp side gutter of every item except the full-width footer. */
+private val gutter = Modifier.padding(horizontal = 16.dp)
 
 @Composable
 private fun DateBar(
@@ -244,11 +255,12 @@ private fun DateBar(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     onToday: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Moon.Card),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier

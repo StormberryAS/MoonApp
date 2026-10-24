@@ -1,0 +1,7 @@
+1.0.5 gives the times screen a new top and bottom, in the manner of CheckLink.
+
+- The mark, name and tagline are now centred above the moon's figures.
+- The footer names everything MoonApp is built on, with a link to each source and licence, and adds the Stormberry icon row and a privacy line you can test by going offline.
+- Footer links open in another app; the app still has no internet permission.
+
+Full release log: https://github.com/StormberryAS/MoonApp/blob/main/CHANGELOG.md

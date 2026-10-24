@@ -1,18 +1,27 @@
 package no.stormberry.moonapp.ui.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -20,59 +29,117 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import no.stormberry.moonapp.R
+import java.util.Locale
 import no.stormberry.moonapp.ui.Moon
 
 /**
- * The furniture around MoonApp's screens: the header mark, the footer lockup and the
- * background glow.
+ * The furniture around MoonApp's times screen: the hero at the top, the footer at the bottom
+ * and the background glow.
  *
- * Ported from SunApp's Chrome.kt so the two apps read as one product. v1.0.0 had none of it:
- * the times screen opened with a bare "MoonApp" text and no mark at all, which is the first
- * thing anyone comparing the two apps notices.
+ * Since 1.0.5 the hero and the footer are CheckLink's, re-built natively and kept in MoonApp's
+ * own colours. Before that they were SunApp's: a mark beside a left-aligned name, and a small
+ * "Alarm permissions only" line with two links and the lockup. Marcos approved the wording on
+ * 2026-10-23, with three changes to the first draft: the hero keeps the web's short tagline, the
+ * credits are named in the footer itself, and the permissions line is back.
  */
 
-/** Header: the mark, the name and the web app's tagline, near enough verbatim. */
+/**
+ * Hero: the mark, the name and a tagline, all centred, as at the top of CheckLink.
+ *
+ * Replaces the 1.0.4 header, which set the mark to the left of a left-aligned name and tagline
+ * and read as a toolbar rather than an opening. This one is CheckLink's hero re-built natively:
+ * a 64 dp mark with its glow, the name large and centred, and a tagline in the secondary colour
+ * under it, no wider than 34 rem (544 dp) so it still wraps on a tablet. The function cards
+ * follow it, as on CheckLink.
+ *
+ * Sizes are CheckLink's (`.hero` in its style.css): 16 dp between the three, the name at
+ * 1.9 rem and the tagline at 1.05 rem with a 1.55 line height. All in sp, so Android's font
+ * size setting scales them as the browser's does there.
+ */
 @Composable
-fun AppHeader(modifier: Modifier = Modifier) {
-    Row(
+fun AppHero(modifier: Modifier = Modifier) {
+    Column(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Image(
             painter = painterResource(R.drawable.ic_app_logo),
-            // Decorative: the title beside it is already the accessible name, so announcing
-            // the mark as well would only slow a screen reader down.
+            // Decorative: the name under it is already the accessible name, so announcing the
+            // mark as well would only slow a screen reader down.
             contentDescription = null,
             modifier = Modifier
-                .size(46.dp)
+                .size(64.dp)
                 .drawBehind { drawLogoGlow() },
         )
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "MoonApp",
-                style = MaterialTheme.typography.headlineSmall,
-                color = Moon.TextPrimary,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Moon times and lunar alarms, computed offline",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Moon.TextSecondary,
-            )
-        }
+        Text(
+            text = APP_NAME,
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = 30.sp,
+                lineHeight = 33.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+            color = Moon.TextPrimary,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            // The web hero sets this in capitals with CSS (text-transform: uppercase), so it is
+            // set the same way here; the constant stays the page's own text.
+            text = HERO_TAGLINE.uppercase(Locale.ROOT),
+            modifier = Modifier.widthIn(max = 544.dp),
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontSize = 15.2.sp,
+                lineHeight = 24.sp,
+                letterSpacing = 0.06.em,
+            ),
+            color = Moon.TextSecondary,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
+const val APP_NAME = "MoonApp"
+
 /**
- * Footer: what the app does not do, who made it, and where to read the terms.
+ * The tagline of the moon.stormberry.as hero, word for word: `<p class="tagline">` in index.html,
+ * where the line break is a `<br>`. Marcos, 2026-10-23: keep the short tagline, consistent with
+ * the web; where the app and the page differ, the page wins. HeroTaglineTest reads index.html
+ * and fails if the two drift apart. (1.0.4 said "Moon times and lunar alarms, computed
+ * offline"; the 1.0.5 draft was a long sentence. Neither is used any more.)
+ */
+const val HERO_TAGLINE = "MOONRISE \u00B7 TRANSIT \u00B7 MOONSET\nanywhere on Earth"
+
+/**
+ * Footer, as CheckLink's: the Stormberry wordmark and tagline, what runs on the device, a
+ * divider, the icon row, the bold privacy line, then the small print.
+ *
+ * Laid out the way CheckLink's `.site-footer` lays itself out on a phone: full width on the
+ * page's darkest colour under a hairline, 24 dp of side padding, the brand block above the
+ * "runs on your device" block, then a centred column under a second hairline.
  *
  * ### Opening a link from an app with no INTERNET permission
  *
@@ -81,75 +148,227 @@ fun AppHeader(modifier: Modifier = Modifier) {
  *     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
  *
  * so this process cannot open a socket. That is not in tension with the links below.
- * [LocalUriHandler] fires an ACTION_VIEW intent and the BROWSER does the fetching, in its own
- * process with its own permissions. Nothing here needs INTERNET and nothing here should ever
- * be "fixed" by adding it: the whole privacy claim rests on that permission being absent, and
- * `android/expected-permissions.txt` plus the CI diff against the built APK is what keeps the
- * claim honest.
+ * [openLink] fires an ACTION_VIEW intent and the BROWSER (or the Nostr client) does the
+ * fetching, in its own process with its own permissions. Nothing here needs INTERNET and
+ * nothing here should ever be "fixed" by adding it: the whole privacy claim rests on that
+ * permission being absent, and `android/expected-permissions.txt` plus the CI diff against the
+ * built APK is what keeps the claim honest.
  */
 @Composable
 fun AppFooter(modifier: Modifier = Modifier) {
-    val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
+    val open: (String) -> Unit = remember(context) { { url: String -> openLink(context, url); Unit } }
+
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Moon.Background)
+            .drawBehind {
+                drawLine(Moon.Border, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
+            }
+            .padding(start = 24.dp, end = 24.dp, top = 64.dp, bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            // Not "no permissions": the APK declares several, all of them for the alarm.
-            // What is true, and is the claim the manifest defends, is that there is no
-            // INTERNET permission at all, so the app cannot reach the network even if it
-            // wanted to. Same wording as SunApp, for the same reason.
-            text = "Alarm permissions only. No internet. No tracking.",
-            style = MaterialTheme.typography.bodySmall,
-            color = Moon.TextMuted,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        // The two documents a user is entitled to read before trusting an app. Underlined as
-        // well as coloured, because colour alone is not an accessible affordance for a link.
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        // The two blocks of .footer-inner, which wrap onto their own rows on a phone.
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(32.dp),
         ) {
-            FooterLink("Privacy") { uriHandler.openUri(PRIVACY_URL) }
-            Text("·", style = MaterialTheme.typography.bodySmall, color = Moon.TextMuted)
-            FooterLink("Disclaimer") { uriHandler.openUri(DISCLAIMER_URL) }
+            Column(modifier = Modifier.widthIn(max = 320.dp)) {
+                Text(
+                    text = buildAnnotatedString {
+                        append("Stormberry")
+                        withStyle(SpanStyle(color = Moon.Blue)) { append(".") }
+                    },
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 24.sp,
+                        lineHeight = 30.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = Moon.TextPrimary,
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .clearAndSetSemantics {
+                            contentDescription = "Stormberry AS website"
+                            role = Role.Button
+                        }
+                        .clickable(role = Role.Button) { open(FooterLinks.SITE) }
+                        .wrapContentHeight(Alignment.CenterVertically),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = FooterText.TAGLINE,
+                    style = footerStyle(15.2.sp, 23.sp),
+                    color = Moon.TextSoft,
+                )
+            }
+
+            Text(
+                text = buildAnnotatedString {
+                    append("Runs entirely on your device: our own code, ")
+                    footerLink("SunCalc", FooterLinks.SUNCALC, open)
+                    append("'s formulae (")
+                    footerLink("BSD 2-Clause", FooterLinks.SUNCALC_LICENCE, open)
+                    append("), the ")
+                    footerLink("Inter", FooterLinks.INTER, open)
+                    append(" typeface (")
+                    footerLink("OFL 1.1", FooterLinks.OFL, open)
+                    append("), ")
+                    footerLink("Android Jetpack", FooterLinks.JETPACK, open)
+                    append(" and ")
+                    footerLink("Kotlin", FooterLinks.KOTLIN, open)
+                    append(" libraries (")
+                    footerLink("Apache 2.0", FooterLinks.APACHE, open)
+                    append("), Google's ")
+                    footerLink("Java desugaring library", FooterLinks.DESUGAR, open)
+                    append(" (")
+                    footerLink("GPL 2 with Classpath Exception", FooterLinks.GPL_CPE, open)
+                    append("), the ")
+                    footerLink("Lucide", FooterLinks.LUCIDE, open)
+                    append(" LinkedIn and GitHub icons (")
+                    footerLink("ISC", FooterLinks.LUCIDE_LICENCE, open)
+                    append(") and city data from ")
+                    footerLink("GeoNames", FooterLinks.GEONAMES, open)
+                    append(" and ")
+                    footerLink("Kartverket", FooterLinks.KARTVERKET, open)
+                    append(" (")
+                    footerLink("CC BY 4.0", FooterLinks.CC_BY, open)
+                    append("). Nothing is sent.")
+                },
+                modifier = Modifier.widthIn(max = 320.dp),
+                style = footerStyle(14.1.sp, 22.sp),
+                color = Moon.TextSoft,
+            )
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(48.dp))
 
-        Image(
-            painter = painterResource(R.drawable.ic_stormberry_logo),
-            // No longer decorative: it is now the link to stormberry.as, so it needs a name a
-            // screen reader can announce and a Role that says what activating it does.
-            contentDescription = "Stormberry AS website",
-            // Full white would out-shout the app's own content this far down.
-            alpha = 0.72f,
-            // Height only: the drawable carries the lockup's proportions, so the width
-            // follows from them and never has to be kept in sync.
-            modifier = Modifier
-                .height(24.dp)
-                .clickable(role = Role.Button) { uriHandler.openUri(SITE_URL) },
-        )
+        // .footer-bottom: a hairline, then a centred column.
+        HorizontalDivider(color = Moon.BorderSoft)
+        Spacer(Modifier.height(32.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Row(horizontalArrangement = Arrangement.Center) {
+                for (icon in FooterIcons) {
+                    SocialIcon(icon, onClick = { open(icon.url) })
+                }
+            }
+
+            Text(
+                text = FooterText.OFFLINE,
+                style = footerStyle(14.4.sp, 23.sp, FontWeight.SemiBold),
+                color = Moon.TextSoft,
+                textAlign = TextAlign.Center,
+            )
+
+            Text(
+                text = FooterText.PERMISSIONS,
+                style = footerStyle(13.6.sp, 22.sp),
+                color = Moon.TextSoft,
+                textAlign = TextAlign.Center,
+            )
+
+            Text(
+                text = buildAnnotatedString {
+                    append("\u00A9 2026 Stormberry AS \u00B7 ")
+                    footerLink(FooterText.ORG_NR, FooterLinks.ORG_NR, open)
+                    append(" \u00B7 Ask\u00F8y, Norway \u00B7 ")
+                    footerLink("Privacy", FooterLinks.PRIVACY, open)
+                    append(" \u00B7 ")
+                    footerLink("Disclaimer", FooterLinks.DISCLAIMER, open)
+                },
+                style = footerStyle(13.6.sp, 22.sp),
+                color = Moon.TextMutedReadable,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = FooterText.PRIVACY_FIRST,
+                style = footerStyle(13.6.sp, 22.sp),
+                color = Moon.TextMutedReadable,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = FooterText.CITY_LIST_DATED,
+                style = footerStyle(13.6.sp, 22.sp),
+                color = Moon.TextMutedReadable,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = FooterText.AI,
+                style = footerStyle(13.6.sp, 22.sp),
+                color = Moon.TextMutedReadable,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
 @Composable
-private fun FooterLink(label: String, onClick: () -> Unit) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.bodySmall,
-        color = Moon.TextPrimary,
-        textDecoration = TextDecoration.Underline,
-        modifier = Modifier.clickable(role = Role.Button, onClick = onClick),
-    )
+private fun footerStyle(
+    size: TextUnit,
+    lineHeight: TextUnit,
+    weight: FontWeight = FontWeight.Normal,
+) = MaterialTheme.typography.bodySmall.copy(
+    fontSize = size,
+    lineHeight = lineHeight,
+    fontWeight = weight,
+)
+
+/**
+ * A link in running footer text: the app's blue AND underlined, because colour alone is not an
+ * accessible affordance for a link (CheckLink's footer does the same). A real link annotation,
+ * so TalkBack lists it among the text's links.
+ *
+ * Spaces inside [label] are no-break spaces, which is how the web footer's `white-space: nowrap`
+ * is kept: the org.nr. does not break inside itself.
+ */
+private fun AnnotatedString.Builder.footerLink(
+    label: String,
+    url: String,
+    open: (String) -> Unit,
+) {
+    withLink(
+        LinkAnnotation.Clickable(
+            tag = url,
+            styles = TextLinkStyles(
+                SpanStyle(color = Moon.Blue, textDecoration = TextDecoration.Underline),
+            ),
+            linkInteractionListener = { open(url) },
+        ),
+    ) { append(label) }
 }
 
-private const val SITE_URL = "https://stormberry.as"
-private const val PRIVACY_URL = "https://stormberry.as/privacy.html"
-private const val DISCLAIMER_URL = "https://moon.stormberry.as/disclaimer.html"
+/** One mark of the icon row: 24 dp drawn, 48 dp to touch, named for a screen reader. */
+@Composable
+private fun SocialIcon(icon: FooterIcon, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clickable(role = Role.Button, onClickLabel = "Open ${icon.label}", onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(icon.drawable),
+            contentDescription = icon.label,
+            tint = Moon.TextMutedReadable,
+            modifier = Modifier.size(24.dp),
+        )
+    }
+}
+
+/** What the icon row shows, in CheckLink's order: LinkedIn, GitHub, Nostr, Tor. */
+private class FooterIcon(val label: String, val url: String, @param:DrawableRes val drawable: Int)
+
+private val FooterIcons = listOf(
+    FooterIcon("LinkedIn", FooterLinks.LINKEDIN, R.drawable.ic_social_linkedin),
+    FooterIcon("GitHub", FooterLinks.GITHUB, R.drawable.ic_social_github),
+    FooterIcon("Nostr", FooterLinks.NOSTR, R.drawable.ic_social_nostr),
+    FooterIcon("Tor onion site", FooterLinks.ONION, R.drawable.ic_social_onion),
+)
 
 /**
  * The web app's header glow and its cool lower wash, as two radial gradients.

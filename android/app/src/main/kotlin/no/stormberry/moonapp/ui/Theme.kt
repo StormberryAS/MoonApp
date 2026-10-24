@@ -46,6 +46,18 @@ object Moon {
     /** --text-muted */
     val TextMuted = Color(0xFF3A4570)
 
+    /**
+     * Footer text that must be read, not glanced at: 9.99:1 on [Background]. [TextSecondary] is
+     * 6.3:1 and [TextMuted] only 2.2:1, which is fine for a hint beside a field but is what made
+     * the 1.0.4 footer line hard to read. CheckLink's footer uses 8.8:1 and 6.1:1 for the same
+     * two roles; this and [TextMutedReadable] are MoonApp's equivalents.
+     */
+    val TextSoft = Color(0xFFA9B7DA)
+    /** The small print of the footer: [TextSecondary], 6.3:1 on [Background], never [TextMuted]. */
+    val TextMutedReadable = Color(0xFF7B8FC4)
+    /** The footer's inner hairline, CheckLink's `rgba(255, 255, 255, 0.05)`. */
+    val BorderSoft = Color(0x0DFFFFFF)
+
     /** --accent-silver, the lit-limb accent and the app's primary */
     val Silver = Color(0xFFC8D8F0)
     /** --accent-blue */

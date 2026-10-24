@@ -64,5 +64,6 @@ icon: ./fastlane/metadata/android/en-US/images/icon.png
 images:
   - ./fastlane/metadata/android/en-US/images/phoneScreenshots/01-times_phone.png
   - ./fastlane/metadata/android/en-US/images/phoneScreenshots/02-alarms_phone.png
+  - ./fastlane/metadata/android/en-US/images/phoneScreenshots/03-footer_phone.png
 
 match: "MoonApp-.*\\.apk$"

@@ -81,12 +81,16 @@ android {
         // next new and full moon on the right day, the transit as the culmination, one transit
         // alarm per transit). See fastlane changelogs/5.txt.
         //
+        // Sovereign 1.0.5 (code 6), October 2026: the times screen opens with a centred hero and
+        // ends with CheckLink's footer, in place of the SunApp-style header and small footer.
+        // No permission changes. See fastlane changelogs/6.txt.
+        //
         // Play 1.1.0 (code 4): RESERVED, not yet released. Play comes second, and the rule
         // from UsernameGenerator holds here too: every Play upload must be built from a
         // sovereign tag that already shipped, same code, different application ID and
         // different signature. Never respin Play from an untagged tree.
-        versionCode = if (playBuild) 4 else 5
-        versionName = if (playBuild) "1.1.0" else "1.0.4"
+        versionCode = if (playBuild) 4 else 6
+        versionName = if (playBuild) "1.1.0" else "1.0.5"
 
         vectorDrawables.generatedDensities()
 
