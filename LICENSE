@@ -87,3 +87,19 @@ GeoNames city data (cities.js, and data/cities.tsv in the Android app)
   population cutoff take their coordinates from Kartverket's Sentralt
   stedsnavnregister (CC BY 4.0, © Kartverket).
   Full license: https://creativecommons.org/licenses/by/4.0/
+
+Kotlin and the Android Jetpack libraries (the Android app only)
+  License:   Apache License 2.0
+  Authors:   JetBrains s.r.o. and Kotlin contributors; The Android Open Source Project
+  Sources:   https://kotlinlang.org/ and https://developer.android.com/jetpack
+  Used:      the Kotlin language and standard library, Jetpack Compose and Material 3 (through the
+             Compose BOM), AndroidX Core, Lifecycle and Activity. The versions are in
+             android/gradle/libs.versions.toml.
+  Full license: https://www.apache.org/licenses/LICENSE-2.0
+
+Java desugaring library, desugar_jdk_libs (the Android app only)
+  License:   GNU General Public License version 2 with the Classpath Exception
+  Author:    Google LLC and Oracle and/or its affiliates
+  Source:    https://github.com/google/desugar_jdk_libs
+  Used:      the java.time backport for Android 7 and 8, bundled in the APK.
+  Full license: https://openjdk.org/legal/gplv2+ce.html

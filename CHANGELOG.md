@@ -6,7 +6,32 @@ the app store for a release is `fastlane/metadata/android/en-US/changelogs/<vers
 the full log it points to. Website changes (moon.stormberry.as) have no version number of their own; the ones
 that ship with a release are listed under it.
 
-## 1.0.5 (versionCode 6)
+## 1.0.6 (versionCode 7)
+
+Shorter credits in the footer. Nothing else changes: the moon calendar, the alarms and the permissions are as
+in 1.0.5.
+
+- The footer's "Runs entirely on your device" sentence now credits only what the moon calculation is built on:
+  SunCalc's formulae (BSD 2-Clause) and the city data from GeoNames and Kartverket (CC BY 4.0), each with a link
+  to its source and licence. The Inter typeface, the Lucide LinkedIn and GitHub icons, Kotlin, Android Jetpack
+  and Google's Java desugaring library are no longer named there. They are still credited, with their
+  licences, in LICENSE and the README.
+- The website footer now carries the same texts as the app, word for word: the credits sentence ("Runs entirely
+  on your device: our own code, SunCalc's formulae (BSD 2-Clause) and city data from GeoNames and Kartverket
+  (CC BY 4.0). Nothing is sent.") with the same links and licence labels, and the date of the city list. It no
+  longer names the browser's Intl API as a library or says "Powered by". Two lines have a true web version,
+  because the page has no alarms, permissions or device to disconnect: "Your places never leave this browser."
+  and "No cookies. No tracking. Every calculation runs in your browser." The app keeps "Your places and
+  alarms never leave this device. Disconnect and try it." and "Alarm permissions only. No internet. No
+  tracking."
+- Each licence label stays on one line.
+- The footer screenshots in the app store are retaken from this build.
+
+Tests and build
+- The permissions are unchanged. The footer tests now pin the three credits and fail if an icon, a language, a
+  platform library or the typeface is linked from the footer again.
+
+## 1.0.5 (versionCode 6), 2026-10-24
 
 A new top and bottom for the times screen, in the manner of CheckLink. Nothing else changes: the moon
 calendar, the alarms and the permissions are as in 1.0.4.

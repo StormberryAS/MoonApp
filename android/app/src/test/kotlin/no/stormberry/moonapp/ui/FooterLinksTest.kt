@@ -88,16 +88,11 @@ class FooterLinksTest {
         assertEquals("Alarm permissions only. No internet. No tracking.", FooterText.PERMISSIONS)
     }
 
-    @Test fun everyThirdPartyPartTheApkShipsIsCreditedWithItsSourceAndLicence() {
-        // (source, licence) for each part. A part with no pair here is a part the footer
-        // does not credit, which is what the test is for.
+    @Test fun theFooterCreditsOnlyTheProjectsAndDataTheFunctionIsBuiltOn() {
+        // (source, licence) for each credit. SunCalc is the formulae the moon is computed with;
+        // GeoNames and Kartverket are the place names and coordinates it is computed for.
         val credits = mapOf(
             "SunCalc" to (FooterLinks.SUNCALC to FooterLinks.SUNCALC_LICENCE),
-            "Inter" to (FooterLinks.INTER to FooterLinks.OFL),
-            "Jetpack" to (FooterLinks.JETPACK to FooterLinks.APACHE),
-            "Kotlin" to (FooterLinks.KOTLIN to FooterLinks.APACHE),
-            "desugaring" to (FooterLinks.DESUGAR to FooterLinks.GPL_CPE),
-            "Lucide icons" to (FooterLinks.LUCIDE to FooterLinks.LUCIDE_LICENCE),
             "GeoNames" to (FooterLinks.GEONAMES to FooterLinks.CC_BY),
             "Kartverket" to (FooterLinks.KARTVERKET to FooterLinks.CC_BY),
         )
@@ -110,6 +105,42 @@ class FooterLinksTest {
             FooterLinks.CC_BY,
         )
     }
+
+    @Test fun iconsLanguagesPlatformLibrariesAndTheTypefaceAreNotInTheFooter() {
+        // Marcos, 2026-10-24: these are credited in LICENSE and README only. Any link to one of
+        // them in the footer is the excess he removed.
+        val notInTheFooter = listOf(
+            "lucide", "rsms.me", "openfontlicense", "kotlinlang", "developer.android.com",
+            "apache.org", "desugar", "openjdk",
+        )
+        for (url in FooterLinks.ALL) {
+            for (word in notInTheFooter) {
+                assertFalse("$url credits $word in the footer", url.contains(word))
+            }
+        }
+        // The same check on the footer's source, so a link added without a constant is caught.
+        val chrome = findInRepo("android/app/src/main/kotlin/no/stormberry/moonapp/ui/components/Chrome.kt")
+        val credits = chrome.readText().substringAfter("Runs entirely on your device")
+            .substringBefore("Nothing is sent.")
+        for (word in listOf("Inter", "Lucide", "Kotlin", "Jetpack", "desugaring", "Material", "OFL")) {
+            assertFalse("the credits sentence names $word", credits.contains(word))
+        }
+        assertTrue(credits.contains("SunCalc") && credits.contains("GeoNames") && credits.contains("Kartverket"))
+    }
+
+    @Test fun eachLicenceLabelIsOneUnbreakableRun() {
+        for (label in listOf(FooterText.LICENCE_BSD, FooterText.LICENCE_CC_BY)) {
+            assertFalse("$label has a breaking space", label.contains(' '))
+        }
+        assertEquals("BSD 2-Clause", FooterText.LICENCE_BSD.replace('\u00A0', ' '))
+        assertEquals("CC BY 4.0", FooterText.LICENCE_CC_BY.replace('\u00A0', ' '))
+    }
+
+    private fun findInRepo(path: String): File =
+        generateSequence(File("").absoluteFile) { it.parentFile }
+            .map { File(it, path) }
+            .firstOrNull { it.exists() }
+            ?: error("$path not found")
 
     @Test fun theFooterNeverAsksForTheInternetPermission() {
         // expected-permissions.txt is what CI diffs against the built APK; links open in

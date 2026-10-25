@@ -115,5 +115,22 @@ A service worker (`ts/sw.ts`, compiled to `sw.js`) lets the site open with no ne
 ## Credits
 Built by [Stormberry AS](https://stormberry.as). Proudly powered by sovereign AI agents.
 
+### Third-party projects, data, icons and fonts
+The app and the website credit on screen only the projects and data the moon calculation is built on:
+[SunCalc](https://github.com/mourner/suncalc) (BSD 2-Clause), and the city data from
+[GeoNames](https://www.geonames.org/) and [Kartverket](https://www.kartverket.no/) (CC BY 4.0).
+The footer texts of the two are the same, word for word; `tests/static.test.ts` reads the app's wording from the
+Kotlin source and fails if either side is edited alone.
+Everything else the project uses is credited here and in [LICENSE](LICENSE), which carries the notices:
+
+| Part | Used for | Licence |
+|---|---|---|
+| [SunCalc](https://github.com/mourner/suncalc) | The moon formulae (`suncalc.js`, and the Kotlin port in `lunar/MoonCalc.kt`) | BSD 2-Clause |
+| [GeoNames](https://www.geonames.org/) and [Kartverket](https://www.kartverket.no/) | The city catalogue (`cities.js`, `data/cities.tsv`) | CC BY 4.0 |
+| [Inter](https://rsms.me/inter/) | The typeface of the website and the app | SIL OFL 1.1 |
+| [Lucide](https://lucide.dev/) | The LinkedIn and GitHub icons | ISC (portions MIT) |
+| [Kotlin](https://kotlinlang.org/) and [Android Jetpack](https://developer.android.com/jetpack) | The Android app: language, Compose, Material 3, AndroidX | Apache 2.0 |
+| [desugar_jdk_libs](https://github.com/google/desugar_jdk_libs) | `java.time` on Android 7 and 8 | GPL 2 with Classpath Exception |
+
 ## Disclaimer
 Supplied free of charge, **as is**, with no warranty of any kind. Full terms in [DISCLAIMER.md](DISCLAIMER.md).

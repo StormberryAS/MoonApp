@@ -20,22 +20,13 @@ object FooterLinks {
     const val PRIVACY = "https://stormberry.as/privacy.html"
     const val DISCLAIMER = "https://moon.stormberry.as/disclaimer.html"
 
-    // Credits: every third-party part the APK ships, each with where it comes from and the licence
-    // it comes under. SunCalc and GeoNames are the two the web footer credits; the rest are what
-    // the APK adds (the Inter typeface, the Jetpack, Kotlin and desugaring libraries, the Lucide
-    // LinkedIn and GitHub icons, and Kartverket's names for a few Askoy places). The licence texts sit in LICENSE, under
-    // "Third-Party Notices".
+    // Credits: only the third-party projects and data the app's function is built on, each with
+    // where it comes from and the licence it comes under (Marcos, 2026-10-24: the footer credits
+    // repos like SunCalc, not icons, programming languages, platform libraries or the typeface).
+    // Those stay in LICENSE and README: the Inter typeface, the Lucide LinkedIn and GitHub icons,
+    // Kotlin, Android Jetpack and Google's Java desugaring library.
     const val SUNCALC = "https://github.com/mourner/suncalc"
     const val SUNCALC_LICENCE = "https://github.com/mourner/suncalc/blob/master/LICENSE"
-    const val INTER = "https://rsms.me/inter/"
-    const val OFL = "https://openfontlicense.org/open-font-license-official-text/"
-    const val JETPACK = "https://developer.android.com/jetpack"
-    const val KOTLIN = "https://kotlinlang.org/"
-    const val APACHE = "https://www.apache.org/licenses/LICENSE-2.0"
-    const val DESUGAR = "https://github.com/google/desugar_jdk_libs"
-    const val GPL_CPE = "https://openjdk.org/legal/gplv2+ce.html"
-    const val LUCIDE = "https://lucide.dev/"
-    const val LUCIDE_LICENCE = "https://lucide.dev/license"
     const val GEONAMES = "https://www.geonames.org/"
     const val KARTVERKET = "https://www.kartverket.no/"
     const val CC_BY = "https://creativecommons.org/licenses/by/4.0/"
@@ -43,8 +34,7 @@ object FooterLinks {
     /** Every link the footer can open, for the test. */
     val ALL = listOf(
         SITE, LINKEDIN, GITHUB, NOSTR, ONION, ORG_NR, PRIVACY, DISCLAIMER,
-        SUNCALC, SUNCALC_LICENCE, INTER, OFL, JETPACK, KOTLIN, APACHE, DESUGAR, GPL_CPE,
-        LUCIDE, LUCIDE_LICENCE, GEONAMES, KARTVERKET, CC_BY,
+        SUNCALC, SUNCALC_LICENCE, GEONAMES, KARTVERKET, CC_BY,
     )
 }
 
@@ -72,6 +62,10 @@ object FooterText {
 
     /** The line the footer carried before 1.0.5; Marcos asked for it back, 2026-10-23. Verbatim. */
     const val PERMISSIONS = "Alarm permissions only. No internet. No tracking."
+
+    /** Licence labels, with no-break spaces so each stays on one line. */
+    const val LICENCE_BSD = "BSD\u00A02-Clause"
+    const val LICENCE_CC_BY = "CC\u00A0BY\u00A04.0"
 
     /**
      * The date of the bundled city list, as CheckLink dates its rules and its domain list.

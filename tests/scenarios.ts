@@ -31,8 +31,13 @@ export const clockAt = (t: number): string => `(() => {
   globalThis.Date = D;
 })();`;
 
-/** Removes every ?v= stamp, so trees whose files differ only in their bytes compare equal. */
-export const unstamp = (s: string): string => s.replace(/\?v=[0-9a-f]{8}/g, '?v=STAMP');
+/**
+ * Removes every ?v= stamp, so trees whose files differ only in their bytes compare equal, and writes
+ * the zone name of Europe/London in winter as "GMT": Chromium's ICU printed it as "GMT+0" until
+ * 24 October 2026 and prints "GMT" since (Chromium 156), so the snapshots record the name the
+ * browser gives today and read the same under either.
+ */
+export const unstamp = (s: string): string => s.replace(/\?v=[0-9a-f]{8}/g, '?v=STAMP').replace(/GMT\+0(?![\d:])/g, 'GMT');
 
 /** What one snapshot holds: the parts of the page app.js writes to, and a hash of all of it. */
 export type Snap = Record<string, string | boolean | number | null>;

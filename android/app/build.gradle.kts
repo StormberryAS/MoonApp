@@ -85,12 +85,17 @@ android {
         // ends with CheckLink's footer, in place of the SunApp-style header and small footer.
         // No permission changes. See fastlane changelogs/6.txt.
         //
+        // Sovereign 1.0.6 (code 7), October 2026: the footer credits only the projects and data the
+        // app's function is built on (SunCalc, GeoNames, Kartverket). The icons, the typeface and
+        // the languages and libraries are credited in LICENSE and README only. No permission
+        // changes. See fastlane changelogs/7.txt.
+        //
         // Play 1.1.0 (code 4): RESERVED, not yet released. Play comes second, and the rule
         // from UsernameGenerator holds here too: every Play upload must be built from a
         // sovereign tag that already shipped, same code, different application ID and
         // different signature. Never respin Play from an untagged tree.
-        versionCode = if (playBuild) 4 else 6
-        versionName = if (playBuild) "1.1.0" else "1.0.5"
+        versionCode = if (playBuild) 4 else 7
+        versionName = if (playBuild) "1.1.0" else "1.0.6"
 
         vectorDrawables.generatedDensities()
 

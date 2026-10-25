@@ -256,3 +256,88 @@ test('offline pilot: registered only on https://moon.stormberry.as; no manifest,
   assert.deepEqual(JSON.parse(read('tsconfig.json')).exclude, ['ts/sw.ts']);
   assert.match(read('tools/build-ts.sh'), /tsconfig\.sw\.json/);
 });
+
+// The website footer and the Android footer carry the same texts (Marcos, 2026-10-24: "keep web
+// versions and APKs consistent"). The app's wording is the approved one, so this reads it from the
+// Kotlin source (FooterContent.kt and Chrome.kt) and fails the moment either side is edited alone.
+// Layout may differ; the texts must not, bar the two lines that have a true web version (below).
+{
+  const kt = (p: string): string => read(`android/app/src/main/kotlin/no/stormberry/moonapp/ui/components/${p}`);
+  const unescape = (s: string): string => s.replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h: string) => String.fromCharCode(parseInt(h, 16))).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  const source = kt('FooterContent.kt');
+  const objectsAt = source.indexOf('object FooterText');
+  const constsOf = (part: string): Map<string, string> => new Map([...part.matchAll(/const val (\w+) = "((?:[^"\\]|\\.)*)"$/gm)].map((m) => [defined(m[1], 'name'), unescape(defined(m[2], 'value'))] as const));
+  const links = constsOf(source.slice(0, objectsAt));
+  const texts = constsOf(source.slice(objectsAt));
+  const text = (name: string): string => defined(texts.get(name), `FooterText.${name}`).replace(/\$(\w+)/g, (_m, n: string) => text(n));
+  const link = (name: string): string => defined(links.get(name), `FooterLinks.${name}`);
+  const chrome = kt('Chrome.kt');
+
+  /** The text of the annotated string that contains `anchor` in Chrome.kt, and the target of each footerLink in it. */
+  const annotated = (anchor: string): { text: string; urls: string[] } => {
+    const from = chrome.lastIndexOf('buildAnnotatedString {', chrome.indexOf(anchor));
+    assert.ok(from >= 0, `${anchor} is in a buildAnnotatedString`);
+    const block = chrome.slice(from, chrome.indexOf('\n                },', from));
+    let out = '';
+    const urls: string[] = [];
+    for (const m of block.matchAll(/append\("((?:[^"\\]|\\.)*)"\)|footerLink\(([^,]+), (?:FooterLinks\.(\w+)),/g)) {
+      if (m[1] !== undefined) { out += unescape(m[1]); continue; }
+      const label = defined(m[2], 'label').trim();
+      out += label.startsWith('FooterText.') ? text(label.slice('FooterText.'.length)) : unescape(label.replace(/^"|"$/g, ''));
+      urls.push(link(defined(m[3], 'link')));
+    }
+    return { text: out, urls };
+  };
+
+  const entities: Record<string, string> = { nbsp: ' ', copy: '©', middot: '·', oslash: 'ø', amp: '&', lt: '<', gt: '>', quot: '"' };
+  const footerHtml = defined(page.match(/<footer class="site-footer">[\s\S]*?<\/footer>/), 'the site footer')[0];
+  const domText = (html: string): string => html.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, '').replace(/&(\w+);/g, (_m, n: string) => defined(entities[n], `entity &${n};`)).replace(/[ \t\r\n]+/g, ' ').trim();
+  const para = (cls: string | null): { text: string; urls: string[] } => {
+    const html = cls ? defined(footerHtml.match(new RegExp(`<p class="${cls}">([\\s\\S]*?)</p>`)), cls)[1] : defined([...footerHtml.matchAll(/<p>([\s\S]*?)<\/p>/g)].find((m) => (m[1] ?? '').includes('&copy;')), 'the company line')[1];
+    return { text: domText(defined(html, 'paragraph')), urls: [...defined(html, 'paragraph').matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => defined(m[1], 'href')) };
+  };
+
+  test('footer texts: the website carries the app\'s footer texts word for word', () => {
+    assert.equal(para('footer-tagline').text, text('TAGLINE'));
+    assert.equal(para('footer-privacy').text, text('PRIVACY_FIRST'));
+    assert.equal(para('footer-ai').text, text('AI'));
+    assert.equal(para('footer-data').text, text('CITY_LIST_DATED'));
+    assert.equal(domText(defined(footerHtml.match(/<a [^>]*class="footer-logo"[^>]*>([\s\S]*?)<\/a>/), 'the wordmark')[1] ?? ''), 'Stormberry.');
+  });
+
+  // Two lines are true differently on the web (Marcos, 2026-10-25, option B): the page has no alarms, no
+  // permissions and no device to disconnect, so it carries its own approved wording. The app's two lines
+  // stay pinned as they are, and the web lines must be the approved ones and must not be the app's.
+  test('footer: the two lines with a true web version are the approved web wording, and the app keeps its own', () => {
+    assert.equal(text('OFFLINE'), 'Your places and alarms never leave this device. Disconnect and try it.');
+    assert.equal(text('PERMISSIONS'), 'Alarm permissions only. No internet. No tracking.');
+    assert.equal(para('footer-offline').text, 'Your places never leave this browser.');
+    assert.equal(para('footer-permissions').text, 'No cookies. No tracking. Every calculation runs in your browser.');
+    assert.notEqual(para('footer-offline').text, text('OFFLINE'));
+    assert.notEqual(para('footer-permissions').text, text('PERMISSIONS'));
+    for (const cls of ['footer-offline', 'footer-permissions']) assert.deepEqual(para(cls).urls, [], `${cls} carries no link`);
+  });
+
+  test('footer credits: the same sentence as the app, lead-in included, with the same links', () => {
+    const app = annotated('Runs entirely on your device');
+    const web = domText(defined(footerHtml.match(/<div class="footer-powered">\s*<p>([\s\S]*?)<\/p>/), 'the credits')[1] ?? '');
+    assert.equal(web, app.text);
+    assert.equal(app.text, 'Runs entirely on your device: our own code, SunCalc\'s formulae (BSD 2-Clause) and city data from GeoNames and Kartverket (CC BY 4.0). Nothing is sent.');
+    const links = [...defined(footerHtml.match(/<div class="footer-powered">[\s\S]*?<\/div>/), 'the credits')[0].matchAll(/href="([^"]+)"/g)].map((m) => defined(m[1], 'href'));
+    assert.deepEqual(links, app.urls);
+    // Only the projects and data the function is built on: no icons, languages, libraries or fonts.
+    for (const word of ['Inter', 'Lucide', 'Kotlin', 'Jetpack', 'desugaring', 'Material', 'Intl', 'OFL']) assert.ok(!web.includes(word), `the credits do not name ${word}`);
+  });
+
+  test('footer company line: the same text as the app, and the same pages behind Privacy and Disclaimer', () => {
+    const app = annotated('\\u00A9 2026 Stormberry AS');
+    const web = para(null);
+    assert.equal(web.text, app.text);
+    assert.ok(app.text.includes(text('ORG_NR')), 'the app line carries the unbreakable Org.nr.');
+    assert.equal(web.urls[0], 'https://virksomhet.brreg.no/nb/oppslag/enheter/937751249');
+    assert.equal(web.urls[0], app.urls[0]);
+    assert.equal(web.urls[1]?.replace(/#labs$/, ''), app.urls[1]);
+    // The website opens its own disclaimer page; the app opens the same page by its address.
+    assert.equal(new URL(defined(web.urls[2], 'disclaimer'), 'https://moon.stormberry.as/').href, app.urls[2]);
+  });
+}

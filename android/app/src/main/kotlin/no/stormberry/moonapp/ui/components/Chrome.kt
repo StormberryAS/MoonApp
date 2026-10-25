@@ -63,7 +63,9 @@ import no.stormberry.moonapp.ui.Moon
  * own colours. Before that they were SunApp's: a mark beside a left-aligned name, and a small
  * "Alarm permissions only" line with two links and the lockup. Marcos approved the wording on
  * 2026-10-23, with three changes to the first draft: the hero keeps the web's short tagline, the
- * credits are named in the footer itself, and the permissions line is back.
+ * credits are named in the footer itself, and the permissions line is back. Since 1.0.6 the
+ * credits are only the projects and data the app's function is built on (SunCalc, GeoNames,
+ * Kartverket); the icons, the typeface and the languages and libraries are in LICENSE and README.
  */
 
 /**
@@ -208,31 +210,13 @@ fun AppFooter(modifier: Modifier = Modifier) {
                     append("Runs entirely on your device: our own code, ")
                     footerLink("SunCalc", FooterLinks.SUNCALC, open)
                     append("'s formulae (")
-                    footerLink("BSD 2-Clause", FooterLinks.SUNCALC_LICENCE, open)
-                    append("), the ")
-                    footerLink("Inter", FooterLinks.INTER, open)
-                    append(" typeface (")
-                    footerLink("OFL 1.1", FooterLinks.OFL, open)
-                    append("), ")
-                    footerLink("Android Jetpack", FooterLinks.JETPACK, open)
-                    append(" and ")
-                    footerLink("Kotlin", FooterLinks.KOTLIN, open)
-                    append(" libraries (")
-                    footerLink("Apache 2.0", FooterLinks.APACHE, open)
-                    append("), Google's ")
-                    footerLink("Java desugaring library", FooterLinks.DESUGAR, open)
-                    append(" (")
-                    footerLink("GPL 2 with Classpath Exception", FooterLinks.GPL_CPE, open)
-                    append("), the ")
-                    footerLink("Lucide", FooterLinks.LUCIDE, open)
-                    append(" LinkedIn and GitHub icons (")
-                    footerLink("ISC", FooterLinks.LUCIDE_LICENCE, open)
+                    footerLink(FooterText.LICENCE_BSD, FooterLinks.SUNCALC_LICENCE, open)
                     append(") and city data from ")
                     footerLink("GeoNames", FooterLinks.GEONAMES, open)
                     append(" and ")
                     footerLink("Kartverket", FooterLinks.KARTVERKET, open)
                     append(" (")
-                    footerLink("CC BY 4.0", FooterLinks.CC_BY, open)
+                    footerLink(FooterText.LICENCE_CC_BY, FooterLinks.CC_BY, open)
                     append("). Nothing is sent.")
                 },
                 modifier = Modifier.widthIn(max = 320.dp),
