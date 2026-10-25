@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      THE GOOGLE PLAY BUILD HAS NO ALARMS.
+
+      This file is merged OVER src/main/AndroidManifest.xml, and only under -PplayBuild=true
+      (app/build.gradle.kts attaches it to the release and debug build types). Every line below
+      is a removal. Nothing is declared here, so the sovereign manifest stays the single place
+      where MoonApp's permissions and components are written down.
+
+      Why: the alarms need USE_EXACT_ALARM, USE_FULL_SCREEN_INTENT and a foreground service of
+      type systemExempted. Each of those is a Play review gate of its own (a restricted-permission
+      form with a video, an App content declaration, a foreground-service declaration with a
+      second video), and the first is documented as an "up to several weeks" extended review.
+      Marcos, 2026-10-25: "SunApp and MoonApp without alarms". The Play copy ships the moon times
+      and nothing that rings. The full version, with alarms, stays on Zapstore, GitHub Releases
+      and Obtainium under the sovereign package no.stormberry.moonapp.
+
+      PlayManifestTest reads this file and the main manifest and fails when a permission or a
+      component named in main is not removed here, so a new alarm permission cannot reach Play
+      by being added to main alone.
+    -->
+
+    <!-- Every permission the alarms use. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" tools:node="remove" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" tools:node="remove" />
+    <uses-permission android:name="android.permission.VIBRATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" tools:node="remove" />
+
+    <!--
+      androidx.core declares a private signature permission for its registerReceiver
+      compatibility shim. It grants nothing to anyone but this app, yet it still shows up in
+      `aapt dump permissions` and in every APK inspector, which muddies a "no permissions" claim.
+      The only code in MoonApp that registers a receiver at run time is the alarm service, which
+      this build does not have, so both halves of it are removed here (UsernameGenerator and
+      MetadataScrubber do the same). The sovereign build keeps them.
+    -->
+    <permission
+        android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        tools:node="remove" />
+    <uses-permission
+        android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        tools:node="remove" />
+
+    <application>
+        <!-- The system alarm intent trampoline (SHOW_ALARMS, DISMISS_ALARM). -->
+        <activity android:name=".alarm.AlarmIntentActivity" tools:node="remove" />
+        <!-- The full-screen ring screen. -->
+        <activity android:name=".alarm.RingActivity" tools:node="remove" />
+        <!-- The foreground service that rings. -->
+        <service android:name=".alarm.AlarmService" tools:node="remove" />
+        <!-- The receiver the alarm manager fires. -->
+        <receiver android:name=".alarm.AlarmFireReceiver" tools:node="remove" />
+        <!-- The receiver that re-plans alarms after a reboot, a clock change or an update. -->
+        <receiver android:name=".alarm.SystemEventReceiver" tools:node="remove" />
+    </application>
+</manifest>

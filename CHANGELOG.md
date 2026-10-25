@@ -6,7 +6,27 @@ the app store for a release is `fastlane/metadata/android/en-US/changelogs/<vers
 the full log it points to. Website changes (moon.stormberry.as) have no version number of their own; the ones
 that ship with a release are listed under it.
 
-## 1.0.6 (versionCode 7)
+## 1.0.7 (versionCode 8)
+
+Nothing changes in the app you use: the moon times, the alarms and the permissions are as in 1.0.6. This release
+adds the switch that builds MoonApp for Google Play.
+
+- A separate build for Google Play, `no.stormberry.moonapp.play`, made with `-PplayBuild=true`. It has no alarms:
+  no Alarms tab, no alarm permission (exact alarms, notifications, full-screen alarms, foreground service, boot,
+  wake lock, vibration) and no alarm component. The moon times, phase and calendar are the same. Its footer
+  says "No permissions. No internet. No tracking." and leaves the word alarms out of its other line. This app,
+  with alarms, stays on GitHub Releases, Obtainium and Zapstore under `no.stormberry.moonapp`; the two packages
+  install side by side and neither can update the other.
+- `BuildConfig.PLAY_BUILD` is `false` in this app, so every screen, permission and component is as before.
+- The README explains the Play build and keeps the table that maps each sovereign tag to its Play version (the Play
+  versionName is the sovereign one; the Play versionCode is 1000 plus the sovereign code).
+
+Tests and build
+- `PlayManifestTest` fails when the main manifest names a permission or component that the Play manifest does not
+  remove. `PlayFooterTest` pins the Play footer lines. A guard refuses a release bundle without the Play
+  flag, a release APK with it, and an upload key that is the release key.
+
+## 1.0.6 (versionCode 7), 2026-10-25
 
 Shorter credits in the footer. Nothing else changes: the moon calendar, the alarms and the permissions are as
 in 1.0.5.

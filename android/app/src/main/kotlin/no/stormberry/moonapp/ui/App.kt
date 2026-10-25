@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import no.stormberry.moonapp.BuildConfig
 import no.stormberry.moonapp.alarm.AlarmCapability
 
 /**
@@ -54,7 +55,11 @@ fun MoonApp(startOnAlarms: Boolean = false, modifier: Modifier = Modifier) {
     var place by remember {
         mutableStateOf(ChosenPlace(saved.city, saved.lat, saved.lon, saved.tz))
     }
-    var tab by remember { mutableStateOf(if (startOnAlarms) MoonTab.ALARMS else MoonTab.TIMES) }
+    // The Google Play build has no alarms (BuildConfig.PLAY_BUILD is a compile-time constant): one
+    // screen, no tab bar, and nothing that reads or writes an alarm rule.
+    var tab by remember {
+        mutableStateOf(if (startOnAlarms && !BuildConfig.PLAY_BUILD) MoonTab.ALARMS else MoonTab.TIMES)
+    }
 
     var showNotice by remember {
         mutableStateOf(shouldShowFirstRunNotice(settings.firstRunNoticeSeenVersion))
@@ -66,31 +71,37 @@ fun MoonApp(startOnAlarms: Boolean = false, modifier: Modifier = Modifier) {
                 place = place,
                 onPlaceChange = { chosen ->
                     place = chosen
-                    // Move every stored rule to the new place and re-arm it. Without this the
-                    // list still reads "City: Oslo" on alarms the user believes they moved.
-                    for (rule in AlarmCapability.loadRules(context)) {
-                        AlarmCapability.saveRule(
-                            context,
-                            rule.copy(
-                                cityName = chosen.label,
-                                latDeg = chosen.latDeg,
-                                lonDeg = chosen.lonDeg,
-                            ),
-                        )
+                    if (!BuildConfig.PLAY_BUILD) {
+                        // Move every stored rule to the new place and re-arm it. Without this the
+                        // list still reads "City: Oslo" on alarms the user believes they moved.
+                        for (rule in AlarmCapability.loadRules(context)) {
+                            AlarmCapability.saveRule(
+                                context,
+                                rule.copy(
+                                    cityName = chosen.label,
+                                    latDeg = chosen.latDeg,
+                                    lonDeg = chosen.lonDeg,
+                                ),
+                            )
+                        }
                     }
                 },
                 modifier = Modifier.weight(1f),
             )
 
-            MoonTab.ALARMS -> AlarmsRoot(
-                defaultPlace = place,
-                onRulesChanged = { },
-                modifier = Modifier.weight(1f),
-            )
+            MoonTab.ALARMS -> if (!BuildConfig.PLAY_BUILD) {
+                AlarmsRoot(
+                    defaultPlace = place,
+                    onRulesChanged = { },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
 
-        HorizontalDivider(color = Moon.Border)
-        MoonTabBar(tab = tab, onSelect = { tab = it })
+        if (!BuildConfig.PLAY_BUILD) {
+            HorizontalDivider(color = Moon.Border)
+            MoonTabBar(tab = tab, onSelect = { tab = it })
+        }
 
         if (showNotice) {
             FirstRunNotice(onDismiss = {

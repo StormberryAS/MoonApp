@@ -14,7 +14,7 @@ MoonApp ships in two distinct package editions:
 * **Zapstore / Sovereign APK:** `no.stormberry.moonapp`  
   Direct, sovereign release signed with the Stormberry AS release key. Zero trackers, zero analytics, zero Google Play Services dependencies.
 * **Google Play Store Build:** `no.stormberry.moonapp.play`  
-  Separate package name specifically for Google Play distribution (`-PplayBuild=true`).
+  A separate package for Google Play (`-PplayBuild=true`), **without alarms**: the moon times, phase and calendar only, with no alarm screen, no alarm permission and no alarm component. The full version, with lunar alarms, is the sovereign package.
 
 Every released version, and what changed in it, is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -58,6 +58,35 @@ Every released version, and what changed in it, is in [CHANGELOG.md](CHANGELOG.m
 | `FOREGROUND_SERVICE_SYSTEM_EXEMPTED` | Android 14+ foreground service type for an alarm clock |
 
 > **Sovereign Privacy Guarantee:** `INTERNET`, `ACCESS_FINE_LOCATION`, and `ACCESS_COARSE_LOCATION` are explicitly removed from `moonapp.apk`.
+
+### Google Play build (no alarms)
+
+Alarms need `USE_EXACT_ALARM`, `USE_FULL_SCREEN_INTENT` and a foreground service of type `systemExempted`. Each is a Google Play review gate of its own, so the Play package ships without them. Two switches do it, and there are no product flavours (a flavour-level signing config is overridden by the build type's, and a flavour dimension renames every task and breaks the release workflow's APK paths):
+
+* `android/app/src/play/AndroidManifest.xml` is merged over the main manifest under `-PplayBuild=true` and only removes: every alarm permission, the five alarm components, and androidx's private `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. `PlayManifestTest` fails when main names a permission or component the overlay does not remove.
+* `BuildConfig.PLAY_BUILD` is a compile-time constant. It hides the Alarms tab and every alarm line of text, and R8 drops the alarm code that nothing then reaches. The Play footer says "No permissions. No internet. No tracking."
+
+The Play bundle has no `uses-permission` at all. The sovereign APK is unchanged: the same permissions, components and screens, and `BuildConfig.PLAY_BUILD` is `false`.
+
+```bash
+# From android/, in a clean worktree of a sovereign release tag, with the Temurin JDK. The passwords come
+# from the keyring and are never written to a file; --no-configuration-cache is required (the build refuses
+# to run with an upload password set and the configuration cache on).
+export PLAY_UPLOAD_STORE_FILE=$HOME/.android-keys/stormberry-moonapp-play-upload.p12 PLAY_UPLOAD_STORE_TYPE=pkcs12 PLAY_UPLOAD_KEY_ALIAS=upload
+PLAY_UPLOAD_STORE_PASSWORD="$(secret-tool lookup service android-keystore app moonapp-play-upload)" \
+PLAY_UPLOAD_KEY_PASSWORD="$(secret-tool lookup service android-keystore app moonapp-play-upload)" \
+  ./gradlew --no-daemon --no-build-cache --no-configuration-cache :app:bundleRelease -PplayBuild=true
+# app/build/outputs/bundle/release/moonapp-play-release.aab
+```
+
+Two guards sit on the release tasks, because the failure modes are permanent: `bundleRelease` without the flag fails (that bundle would carry the sovereign application ID signed with the release key, and uploading it would claim that package on Play for good), and `assembleRelease` with the flag fails (Play takes the bundle). A third refuses to configure when the upload keystore and the release keystore are the same file.
+
+**Two number lines, one codebase.** The Play versionName is the sovereign one and the Play versionCode is 1000 plus the sovereign code. Every Play upload is built from a sovereign tag that shipped on GitHub Releases; never from an untagged tree.
+
+| Sovereign tag | Sovereign version | Play version | Notes |
+|---|---|---|---|
+| `android-v1.0.6` | 1.0.6 (code 7) | not published | the last release before the Play switch |
+| `android-v1.0.7` | 1.0.7 (code 8) | 1.0.7 (code 1008) | the first Play bundle: no alarms |
 
 ---
 

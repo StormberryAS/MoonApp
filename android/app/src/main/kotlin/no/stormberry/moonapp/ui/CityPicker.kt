@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import no.stormberry.moonapp.BuildConfig
 import no.stormberry.moonapp.cities.CityAssets
 import no.stormberry.moonapp.cities.CitySearch
 import no.stormberry.moonapp.lunar.MoonPhase
@@ -139,7 +140,12 @@ fun CityPicker(
             if (table == null) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "City catalogue unavailable. Alarms still work at the saved location.",
+                    // The Play build has no alarms (BuildConfig.PLAY_BUILD), so it drops the sentence about them.
+                    if (BuildConfig.PLAY_BUILD) {
+                        "City catalogue unavailable."
+                    } else {
+                        "City catalogue unavailable. Alarms still work at the saved location."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = Moon.TextSecondary,
                 )

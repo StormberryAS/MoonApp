@@ -63,6 +63,20 @@ object FooterText {
     /** The line the footer carried before 1.0.5; Marcos asked for it back, 2026-10-23. Verbatim. */
     const val PERMISSIONS = "Alarm permissions only. No internet. No tracking."
 
+    /**
+     * DRAFT for Marcos's approval: the Google Play build's replacement for [OFFLINE]. The Play build
+     * has no alarms, so it must not say alarms; otherwise it is the same sentence, for the same test
+     * (the APK has no INTERNET permission, so it works the same with the radio off).
+     */
+    const val OFFLINE_PLAY = "Your places never leave this device. Disconnect and try it."
+
+    /**
+     * DRAFT for Marcos's approval: the Google Play build's replacement for [PERMISSIONS], and true
+     * only because the Play manifest removes every permission (PlayManifestTest, and the permission
+     * check in the build notes: the bundle's manifest has no uses-permission at all).
+     */
+    const val PERMISSIONS_PLAY = "No permissions. No internet. No tracking."
+
     /** Licence labels, with no-break spaces so each stays on one line. */
     const val LICENCE_BSD = "BSD\u00A02-Clause"
     const val LICENCE_CC_BY = "CC\u00A0BY\u00A04.0"

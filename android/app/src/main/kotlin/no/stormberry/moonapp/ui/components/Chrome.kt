@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import no.stormberry.moonapp.BuildConfig
 import no.stormberry.moonapp.R
 import java.util.Locale
 import no.stormberry.moonapp.ui.Moon
@@ -243,14 +244,14 @@ fun AppFooter(modifier: Modifier = Modifier) {
             }
 
             Text(
-                text = FooterText.OFFLINE,
+                text = if (BuildConfig.PLAY_BUILD) FooterText.OFFLINE_PLAY else FooterText.OFFLINE,
                 style = footerStyle(14.4.sp, 23.sp, FontWeight.SemiBold),
                 color = Moon.TextSoft,
                 textAlign = TextAlign.Center,
             )
 
             Text(
-                text = FooterText.PERMISSIONS,
+                text = if (BuildConfig.PLAY_BUILD) FooterText.PERMISSIONS_PLAY else FooterText.PERMISSIONS,
                 style = footerStyle(13.6.sp, 22.sp),
                 color = Moon.TextSoft,
                 textAlign = TextAlign.Center,

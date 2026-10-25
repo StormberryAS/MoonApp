@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import no.stormberry.moonapp.BuildConfig
 
 /**
  * What MoonApp says about itself before the first launch gets going.
@@ -78,14 +79,17 @@ fun FirstRunNotice(onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    "An Android alarm is best effort. Battery optimisation, Doze and " +
-                        "manufacturer task killers can all delay or drop one, however exact the " +
-                        "arithmetic behind it is. Do not rely on a lunar alarm for anything that " +
-                        "matters on its own.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(12.dp))
+                // The Play build has no alarms (BuildConfig.PLAY_BUILD), so it says nothing about them.
+                if (!BuildConfig.PLAY_BUILD) {
+                    Text(
+                        "An Android alarm is best effort. Battery optimisation, Doze and " +
+                            "manufacturer task killers can all delay or drop one, however exact the " +
+                            "arithmetic behind it is. Do not rely on a lunar alarm for anything that " +
+                            "matters on its own.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
                 Text(
                     "Check anything that matters against an authoritative source before you act " +
                         "on it.",

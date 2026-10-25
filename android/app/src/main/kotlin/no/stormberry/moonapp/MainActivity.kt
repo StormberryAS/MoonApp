@@ -79,7 +79,10 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        // The Google Play build has no alarms and declares no POST_NOTIFICATIONS (BuildConfig.PLAY_BUILD
+        // is a compile-time constant), so it neither asks for the permission nor starts any alarm code.
+        if (!BuildConfig.PLAY_BUILD &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
@@ -103,6 +106,11 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        if (!BuildConfig.PLAY_BUILD) startAlarmSupport()
+    }
+
+    /** Everything the alarms need at start. Not called, and dropped by R8, in the Google Play build. */
+    private fun startAlarmSupport() {
         // The channels exist from the first start (1.0.4), so the alarms screen can read how the
         // person left them and the system settings list both before any alarm has rung.
         AlarmService.ensureChannels(this)
@@ -120,7 +128,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        replanInBackground()
+        if (!BuildConfig.PLAY_BUILD) replanInBackground()
     }
 
     /**
