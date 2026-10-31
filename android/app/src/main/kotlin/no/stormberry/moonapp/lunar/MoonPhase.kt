@@ -51,7 +51,10 @@ object MoonPhase {
         val fullAt: Instant? = null,
     )
 
-    /** Daily samples [nextLunations] takes, from two days before [from]: enough for both events. */
+    /**
+     * Daily samples [nextLunations] and [nextPhases] take, from two days before [from]: enough for
+     * all four principal phases.
+     */
     private const val SEARCH_DAYS = 38
 
     private const val DAY_MS = 86_400_000L
@@ -99,11 +102,64 @@ object MoonPhase {
     }
 
     /**
+     * The four principal phases, each with the phase value it is reached at. New Moon is 1, not
+     * 0, because [crossing] finds it where the phase wraps past 1 back to 0.
+     */
+    enum class PrincipalPhase(val target: Double) { NEW(1.0), FIRST_QUARTER(0.25), FULL(0.5), LAST_QUARTER(0.75) }
+
+    /** One principal phase: the date it falls on in the place's zone, and the moment itself. */
+    data class PhaseEvent(val phase: PrincipalPhase, val date: LocalDate, val at: Instant)
+
+    /**
+     * The first of each principal phase at or after the start of [from] in [zone], dated in that
+     * zone, soonest first (1.0.8, for the large home screen widget, the first surface that shows
+     * the quarters).
+     *
+     * The same scan as [nextLunations], step for step: daily samples at 12:00 UTC from two days
+     * before [from], each crossing bracketed by two samples and found by [crossing], an event
+     * dated before [from] in [zone] skipped. New and Full Moon use the brackets [nextLunations]
+     * uses, so their dates and moments are exactly its own (NextPhasesTest holds the two
+     * together for every day of 2026 and 2027 in eight zones); First and Last Quarter are where
+     * the phase crosses 0.25 and 0.75 upward. A quarter bracket never spans the wrap at 1, so
+     * [crossing] needs no change. [SEARCH_DAYS] is enough for all four: the latest one can fall
+     * a whole lunation (29.53 days) after an event skipped just before [from].
+     *
+     * Precision is the model's: suncalc can place a phase up to about 6 hours from the real
+     * event, so a few dates a year fall on the neighbouring day, as for new and full moon.
+     */
+    fun nextPhases(from: LocalDate, zone: ZoneId = ZoneOffset.UTC): List<PhaseEvent> {
+        val start = noonUtc(from).toEpochMilli() - 2 * DAY_MS
+        val found = LinkedHashMap<PrincipalPhase, Long>()
+        var prevPhase = phaseAt(start.toDouble())
+        for (d in 1..SEARCH_DAYS) {
+            val t1 = start + d * DAY_MS
+            val currPhase = phaseAt(t1.toDouble())
+            for (p in PrincipalPhase.entries) {
+                if (p in found) continue
+                val bracketed = when (p) {
+                    PrincipalPhase.NEW -> prevPhase > 0.75 && currPhase < 0.25
+                    PrincipalPhase.FIRST_QUARTER -> prevPhase < 0.25 && currPhase >= 0.25
+                    PrincipalPhase.FULL -> prevPhase < 0.5 && currPhase >= 0.5
+                    PrincipalPhase.LAST_QUARTER -> prevPhase < 0.75 && currPhase >= 0.75
+                }
+                if (!bracketed) continue
+                val at = crossing(t1 - DAY_MS, t1, p.target)
+                if (!localDate(at, zone).isBefore(from)) found[p] = at
+            }
+            if (found.size == PrincipalPhase.entries.size) break
+            prevPhase = currPhase
+        }
+        return found.entries
+            .map { (p, at) -> PhaseEvent(p, localDate(at, zone), Instant.ofEpochMilli(at)) }
+            .sortedBy { it.at }
+    }
+
+    /**
      * The moment (epoch milliseconds) the phase reaches [target] inside [t0, t1], by bisection:
      * 0.5 for a Full Moon, 1 for a New Moon (where the phase wraps, so a phase below 0.5 counts
-     * as past 1). Thirty-two halvings of a day leave 0.02 ms. The website's phaseCrossing, step
-     * for step: the midpoints stay fractional and each sample is taken at the whole millisecond
-     * below, as a JavaScript Date truncates.
+     * as past 1), 0.25 and 0.75 for the quarters ([nextPhases]). Thirty-two halvings of a day
+     * leave 0.02 ms. The website's phaseCrossing, step for step: the midpoints stay fractional and
+     * each sample is taken at the whole millisecond below, as a JavaScript Date truncates.
      */
     internal fun crossing(t0: Long, t1: Long, target: Double): Long {
         fun f(t: Double): Double {

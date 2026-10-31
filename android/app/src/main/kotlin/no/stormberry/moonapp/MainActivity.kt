@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import no.stormberry.moonapp.ui.Moon
 import no.stormberry.moonapp.ui.MoonApp
 import no.stormberry.moonapp.ui.MoonAppTheme
+import no.stormberry.moonapp.widget.MoonWidgets
 
 /**
  * The activity, and nothing else. All 433 lines of UI that used to live here are now in the
@@ -129,6 +130,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (!BuildConfig.PLAY_BUILD) replanInBackground()
+        // Both editions (1.0.8): redraw the home screen widgets, if any is placed, whenever the app
+        // comes to the front, which catches anything their own refresh missed. Off the main thread;
+        // with no widget placed it reads nothing and returns.
+        MoonWidgets.refreshAllAsync(applicationContext)
     }
 
     /**

@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import no.stormberry.moonapp.BuildConfig
 import no.stormberry.moonapp.alarm.AlarmCapability
+import no.stormberry.moonapp.data.PlaceStore
+import no.stormberry.moonapp.widget.MoonWidgets
 
 /**
  * The app's composable root: two screens and the bar that swaps them.
@@ -51,7 +53,7 @@ fun MoonApp(startOnAlarms: Boolean = false, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val settings = remember { no.stormberry.moonapp.data.Settings(context) }
 
-    val saved = remember { AlarmCapability.loadLocation(context) }
+    val saved = remember { PlaceStore.loadLocation(context) }
     var place by remember {
         mutableStateOf(ChosenPlace(saved.city, saved.lat, saved.lon, saved.tz))
     }
@@ -85,6 +87,9 @@ fun MoonApp(startOnAlarms: Boolean = false, modifier: Modifier = Modifier) {
                             )
                         }
                     }
+                    // Both editions (1.0.8): the home screen widgets show the chosen place, which
+                    // saveLocation has already committed, so they redraw for it at once.
+                    MoonWidgets.refreshAllAsync(context)
                 },
                 modifier = Modifier.weight(1f),
             )

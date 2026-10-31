@@ -21,6 +21,9 @@
       PlayManifestTest reads this file and the main manifest and fails when a permission or a
       component named in main is not removed here, so a new alarm permission cannot reach Play
       by being added to main alone.
+
+      The four widget receivers (.widget.*) are not removed: the widgets are part of the Play
+      edition (1.0.8). They need no permission, and PlayManifestTest keeps them here.
     -->
 
     <!-- Every permission the alarms use. -->

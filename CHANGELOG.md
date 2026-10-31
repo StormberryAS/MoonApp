@@ -6,7 +6,46 @@ the app store for a release is `fastlane/metadata/android/en-US/changelogs/<vers
 the full log it points to. Website changes (moon.stormberry.as) have no version number of their own; the ones
 that ship with a release are listed under it.
 
-## 1.0.7 (versionCode 8)
+## 1.0.8 (versionCode 9)
+
+Home screen widgets, in both the Zapstore and the Google Play edition. No permission changes.
+
+- Moon (1x1): today's moon, drawn with the lit fraction on the side you see it from (mirrored south of
+  the equator), and the lit percentage.
+- Moon and times (2x1): the same, with today's moonrise, transit and moonset for the place chosen in the
+  app, in that place's time. On a polar day it says Always Up or Always Down, as the website does.
+- Moon, times and phases (4x2, resizable): the same, with the dates of the next new moon, first quarter,
+  full moon and last quarter.
+- The widgets show what the app's card shows for today, update at the place's midnight and at least every
+  three hours while the phone is in use, after a clock or time zone change and after a restart, and never
+  wake the phone to do it. Tapping one opens MoonApp.
+- The Stormberry Labs carousel, as on moon.stormberry.as, now sits above the footer: the same cards in the
+  same order, each opening its website in your browser, so the app still needs no internet permission. It
+  slides as on the website, stops while you touch it or when "Pause the animation" is ticked, and stays still
+  when animations are turned off or TalkBack is exploring by touch.
+- The app opens on today's date for the chosen place, not the phone's, and "Back to today" goes there, so the
+  app and the widgets show the same day: with Sydney chosen on a phone in Oslo late in the evening, it opens on
+  Sydney's date.
+- A time that does not happen on the chosen day is shown as an en dash on the card, as on the widgets.
+
+Tests and build
+- New tests for the moon drawing, the quarter dates (the new and full moon dates equal the app's for every
+  day of 2026 and 2027, and the quarters equal the website's own suncalc.js, `quarter-parity.csv` from
+  `tools/gen-quarter-parity.ts`), the widget texts, the refresh schedule and the large widget's layout
+  choice. PlayManifestTest keeps the widget receivers in the Play build and still allows no permission there.
+- The widget receivers are not exported, and the one that listens for clock and time zone changes is
+  switched on only while a widget is placed, so without a widget the app is never started for them.
+- The chosen place is read and written by `data/PlaceStore` instead of the alarm code, in the same storage, so
+  the Play build still carries no alarm class.
+- The carousel's tests pin its cards and their order to this repository's `index.html`, its icons to
+  `switcher-icons/`, and its motion rules. `PlaceDayTest` checks that the app opens on the day the widget shows.
+- `WidgetRenderTest` (new `src/androidTest`, on the platform's own test runner, so no new library) draws every
+  widget on a device at small and large sizes and checks that its texts fit.
+
+Website, shipped with this release
+- A Google Play button beside the Zapstore one.
+
+## 1.0.7 (versionCode 8), 2026-10-25
 
 Nothing changes in the app you use: the moon times, the alarms and the permissions are as in 1.0.6. This release
 adds the switch that builds MoonApp for Google Play.

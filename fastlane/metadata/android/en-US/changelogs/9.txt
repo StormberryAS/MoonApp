@@ -1,0 +1,3 @@
+1.0.8 adds home screen widgets in three sizes. The small one draws today's moon as it looks from your hemisphere, with the lit percentage. The wide one adds today's moonrise, transit and moonset for the place chosen in the app. The large one also lists the dates of the next new moon, first quarter, full moon and last quarter. Tap a widget to open MoonApp. No new permission.
+
+Full release log: https://github.com/StormberryAS/MoonApp/blob/main/CHANGELOG.md

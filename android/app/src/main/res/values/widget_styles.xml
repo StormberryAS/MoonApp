@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Text styles of the home screen widget layouts (1.0.8), shared by the layouts and their previews. -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      One row of the 2x1 widget and of the large widget's compact arrangement: shares the height,
+      shrinks from 12sp to 8dp where space is short. The floor is in dp, not sp, so a large font
+      size shrinks the row to fit instead of clipping it (at font scale 2.0, 9sp would be 18dp).
+    -->
+    <style name="Widget.MoonApp.MediumRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center_vertical|start</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:textColor">@color/widget_text_primary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:autoSizeTextType" tools:targetApi="26">uniform</item>
+        <item name="android:autoSizeMinTextSize" tools:targetApi="26">8dp</item>
+        <item name="android:autoSizeMaxTextSize" tools:targetApi="26">12sp</item>
+        <item name="android:autoSizeStepGranularity" tools:targetApi="26">1px</item>
+    </style>
+
+    <!--
+      The 2x1's rows (1.0.8): ONE text view, one line per row, so all rows shrink together and
+      always share one text size (Marcos, 2026-10-30), from 12sp down to 8dp where space is short.
+      MoonWidgets sets maxLines to the number of rows, so a long row shrinks instead of wrapping.
+    -->
+    <style name="Widget.MoonApp.MediumRows" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:gravity">center_vertical|start</item>
+        <item name="android:maxLines">3</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:lineSpacingMultiplier">1.15</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:textColor">@color/widget_text_primary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:autoSizeTextType" tools:targetApi="26">uniform</item>
+        <item name="android:autoSizeMinTextSize" tools:targetApi="26">8dp</item>
+        <item name="android:autoSizeMaxTextSize" tools:targetApi="26">12sp</item>
+        <item name="android:autoSizeStepGranularity" tools:targetApi="26">1px</item>
+    </style>
+
+    <!--
+      The hint a widget shows until its first render, "Open MoonApp once to start the widget."
+      (1.0.8). Fills the widget, centred, and shrinks to fit the 1x1 (down to 7dp).
+    -->
+    <style name="Widget.MoonApp.Hint" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:gravity">center</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textColor">@color/widget_text_soft</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:autoSizeTextType" tools:targetApi="26">uniform</item>
+        <item name="android:autoSizeMinTextSize" tools:targetApi="26">7dp</item>
+        <item name="android:autoSizeMaxTextSize" tools:targetApi="26">12sp</item>
+        <item name="android:autoSizeStepGranularity" tools:targetApi="26">1px</item>
+    </style>
+
+    <!--
+      The lit percentage under the moon on the 1x1, the 2x1 and the compact large widget ("100%").
+      A fixed box that the text shrinks into, from 13sp down to 8dp, so it never clips at a large
+      font size (at font scale 1.3, 13sp "100%" is about 46 dp wide). Before Android 8 (no
+      autosize) it stays 13sp.
+    -->
+    <style name="Widget.MoonApp.Percent" parent="">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">18dp</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:gravity">center</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/widget_text_primary</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:autoSizeTextType" tools:targetApi="26">uniform</item>
+        <item name="android:autoSizeMinTextSize" tools:targetApi="26">8dp</item>
+        <item name="android:autoSizeMaxTextSize" tools:targetApi="26">13sp</item>
+        <item name="android:autoSizeStepGranularity" tools:targetApi="26">1px</item>
+    </style>
+
+    <!--
+      A time label of the large widget ("Moonrise"); the accent colour is set per row. The time
+      beside it keeps its full width; at a large font size the label gives way with an ellipsis.
+    -->
+    <style name="Widget.MoonApp.TimeLabel" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- A time of the large widget ("18:42"). -->
+    <style name="Widget.MoonApp.TimeValue" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:textColor">@color/widget_text_primary</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <!-- A phase name on the large widget ("First quarter"); ends in an ellipsis rather than clip. -->
+    <style name="Widget.MoonApp.PhaseLabel" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="android:textColor">@color/widget_text_soft</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <!-- A phase date on the large widget ("Thu 12 Nov"); ends in an ellipsis rather than clip. -->
+    <style name="Widget.MoonApp.PhaseDate" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:textColor">@color/widget_text_primary</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+</resources>

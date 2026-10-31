@@ -211,6 +211,9 @@ android {
         // every permission, component and screen it had; BuildConfig.PLAY_BUILD is false in it.
         // See fastlane changelogs/8.txt.
         //
+        // Sovereign 1.0.8 (code 9), October 2026: home screen widgets in three sizes, in both
+        // editions, with no new permission. See fastlane changelogs/9.txt.
+        //
         // ONE VISIBLE VERSION, TWO CODE LINES (the MetadataScrubber scheme, Marcos, 2026-10-05:
         // "1.0.0 for both"). The sovereign versionCode and versionName on the next lines are the only
         // numbers bumped by hand. The Play build derives its code from them and shows the same name:
@@ -221,8 +224,8 @@ android {
         // keep the two apart, not the version. Every Play upload is built from a sovereign release
         // tag that shipped on GitHub Releases (the mapping table is in README.md): never
         // from an untagged tree.
-        versionCode = 8
-        versionName = "1.0.7"
+        versionCode = 9
+        versionName = "1.0.8"
         if (playBuild) {
             versionCode = playVersionCodeOffset + versionCode!!
         }
@@ -232,7 +235,15 @@ android {
 
         vectorDrawables.generatedDensities()
 
+        // Instrumented tests (src/androidTest, 1.0.8: WidgetRenderTest) run on the platform's own
+        // runner with JUnit 3, so they add no library: no androidx.test, no new Maven dependency.
+        testInstrumentationRunner = "android.test.InstrumentationTestRunner"
     }
+
+    // The platform's optional test libraries, for src/androidTest only (nothing in main uses them,
+    // and they add nothing to the app's manifest or APK).
+    useLibrary("android.test.runner")
+    useLibrary("android.test.base")
 
     signingConfigs {
         if (canSignRelease) {

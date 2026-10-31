@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The widgets' moon before their first render (1.0.8): the dark disc and its rim only, so a widget
+  that has not been drawn yet never shows an invented phase. Same disc as MoonDiscBitmap: dark
+  #1E2647, rim Moon.BorderActive, 2 units of margin on 48.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#FF1E2647"
+        android:strokeColor="#4DC8D8F0"
+        android:strokeWidth="1"
+        android:pathData="M24,2 A22,22 0 1 1 24,46 A22,22 0 1 1 24,2 Z" />
+</vector>

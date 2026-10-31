@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The 1x1 widget (1.0.8): the moon over the lit percentage. MoonWidgets.renderSmall fills it. The
+  root is the whole tap target and carries the one spoken description; its children are hidden
+  from TalkBack so it reads one sentence. No sample values here: until the first render the content
+  is hidden and the hint shows (the picker shows widget_small_preview instead).
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true"
+    android:padding="6dp"
+    tools:targetApi="31">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible"
+        android:gravity="center"
+        android:importantForAccessibility="noHideDescendants"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/moon"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:adjustViewBounds="true"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_moon_blank" />
+
+        <TextView
+            android:id="@+id/percent"
+            style="@style/Widget.MoonApp.Percent"
+            android:layout_width="match_parent"
+            android:layout_marginTop="2dp" />
+    </LinearLayout>
+
+    <!--
+      Shown until the first render (1.0.8): a widget placed before MoonApp was ever opened stays
+      on this layout on Android 12 to 14, because the system sends a never-started app no widget
+      update. MoonWidgets hides it and shows the content above on every render.
+    -->
+    <TextView
+        android:id="@+id/hint"
+        style="@style/Widget.MoonApp.Hint"
+        android:text="@string/widget_hint" />
+</FrameLayout>

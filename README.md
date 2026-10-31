@@ -14,7 +14,7 @@ MoonApp ships in two distinct package editions:
 * **Zapstore / Sovereign APK:** `no.stormberry.moonapp`  
   Direct, sovereign release signed with the Stormberry AS release key. Zero trackers, zero analytics, zero Google Play Services dependencies.
 * **Google Play Store Build:** `no.stormberry.moonapp.play`  
-  A separate package for Google Play (`-PplayBuild=true`), **without alarms**: the moon times, phase and calendar only, with no alarm screen, no alarm permission and no alarm component. The full version, with lunar alarms, is the sovereign package.
+  A separate package for Google Play (`-PplayBuild=true`), **without alarms**: the moon times, phase, calendar and home screen widgets, with no alarm screen, no alarm permission and no alarm component. The full version, with lunar alarms, is the sovereign package.
 
 Every released version, and what changed in it, is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -32,6 +32,8 @@ Every released version, and what changed in it, is in [CHANGELOG.md](CHANGELOG.m
 * **No Location Request:** The page never asks for the device's location. A place comes from city search or from typed coordinates.
 
 ### Android APK Specific (`moonapp.apk`)
+* **Home Screen Widgets:** three sizes (1x1, 2x1, 4x2), in both editions, with no new permission: today's moon with the lit percentage; today's moonrise, transit and moonset for the place chosen in the app; and the dates of the next new moon, first quarter, full moon and last quarter.
+* **Stormberry Labs Carousel:** the website's carousel above the footer; each card opens its website in the browser, so the app still needs no internet permission.
 * **Lunar Alarm Engine:** Wake up or receive alerts based on celestial lunar movements:
   * **Moonrise Alarms:** Set alerts relative to moonrise (e.g. 15 minutes before moonrise).
   * **Moonset Alarms:** Alerts relative to moonset.
@@ -66,7 +68,7 @@ Alarms need `USE_EXACT_ALARM`, `USE_FULL_SCREEN_INTENT` and a foreground service
 * `android/app/src/play/AndroidManifest.xml` is merged over the main manifest under `-PplayBuild=true` and only removes: every alarm permission, the five alarm components, and androidx's private `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. `PlayManifestTest` fails when main names a permission or component the overlay does not remove.
 * `BuildConfig.PLAY_BUILD` is a compile-time constant. It hides the Alarms tab and every alarm line of text, and R8 drops the alarm code that nothing then reaches. The Play footer says "No permissions. No internet. No tracking."
 
-The Play bundle has no `uses-permission` at all. The sovereign APK is unchanged: the same permissions, components and screens, and `BuildConfig.PLAY_BUILD` is `false`.
+The Play bundle has no `uses-permission` at all. The Play switch leaves the sovereign APK unchanged: the same permissions, components and screens, and `BuildConfig.PLAY_BUILD` is `false`.
 
 ```bash
 # From android/, in a clean worktree of a sovereign release tag, with the Temurin JDK. The passwords come
@@ -87,6 +89,7 @@ Two guards sit on the release tasks, because the failure modes are permanent: `b
 |---|---|---|---|
 | `android-v1.0.6` | 1.0.6 (code 7) | not published | the last release before the Play switch |
 | `android-v1.0.7` | 1.0.7 (code 8) | 1.0.7 (code 1008) | the first Play bundle: no alarms |
+| `android-v1.0.8` | 1.0.8 (code 9) | 1.0.8 (code 1009) | home screen widgets |
 
 ---
 

@@ -10,7 +10,7 @@ const ASSETS = [
     './suncalc.js?v=e17fa013',
     './cities.js?v=2f08782c',
     './app.js?v=65235993',
-    './style.css?v=d0078005',
+    './style.css?v=f17c0aa1',
     './fonts/inter/inter.css?v=868d674e',
     './fonts/inter/InterVariable.woff2',
     './fonts/inter/InterVariable-Italic.woff2',

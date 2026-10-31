@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The 1x1 widget "Moon" (1.0.8): today's moon and the lit percentage. Not resizable.
+  updatePeriodMillis is 0: MoonWidgets arms an inexact, non-wakeup refresh instead (see
+  WidgetSchedule). minWidth and minHeight are the pre-Android 12 size (70 x n minus 30 dp);
+  targetCellWidth and targetCellHeight the size on Android 12 and later.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:resizeMode="none"
+    android:widgetCategory="home_screen"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_small"
+    android:previewLayout="@layout/widget_small_preview"
+    android:previewImage="@drawable/widget_moon_preview"
+    android:description="@string/widget_small_description"
+    tools:targetApi="31" />

@@ -3,7 +3,8 @@ handles the timezone properly, and says plainly when the moon does not rise or s
 at all on a given day, which at Norwegian latitudes happens regularly.
 
 It also reports the current phase, the illuminated fraction and the distance to the
-moon, and the dates of the next new and full moon.
+moon, and the dates of the next new and full moon. Home screen widgets in three sizes
+show today's moon, its rise, transit and set, and the dates of the next four phases.
 
 It can wake you by the moon rather than by the clock. Set an alarm for moonrise, for
 moonset, or for a fixed offset either side of one, and it recomputes as the lunar

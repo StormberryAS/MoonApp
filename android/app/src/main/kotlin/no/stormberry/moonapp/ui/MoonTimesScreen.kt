@@ -28,7 +28,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import no.stormberry.moonapp.alarm.AlarmCapability
+import no.stormberry.labs.carousel.LabsApp
+import no.stormberry.labs.carousel.LabsCarousel
+import no.stormberry.labs.carousel.LabsCarouselColors
+import no.stormberry.moonapp.data.PlaceStore
 import no.stormberry.moonapp.ui.components.AppFooter
 import no.stormberry.moonapp.ui.components.AppHero
 import no.stormberry.moonapp.ui.components.drawSkyGlow
@@ -36,8 +39,8 @@ import no.stormberry.moonapp.lunar.LunarDayKind
 import no.stormberry.moonapp.lunar.LunarEvent
 import no.stormberry.moonapp.lunar.MoonCalc
 import no.stormberry.moonapp.lunar.MoonPhase
+import no.stormberry.moonapp.widget.WidgetText
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -74,13 +77,13 @@ fun MoonTimesScreen(
     var latText by rememberSaveable { mutableStateOf("") }
     var lonText by rememberSaveable { mutableStateOf("") }
 
+    val zone = remember(place.zoneId) { PlaceDay.zoneOf(place.zoneId, ZoneId.systemDefault()) }
+
     // The date is NOT persisted. Opening the app tomorrow should show tomorrow, not the day
     // you last happened to be curious about. Same rule as SunApp.
-    var date by rememberSaveable { mutableStateOf(LocalDate.now()) }
-
-    val zone = remember(place.zoneId) {
-        runCatching { ZoneId.of(place.zoneId ?: "") }.getOrElse { ZoneId.systemDefault() }
-    }
+    // Today in the PLACE's zone, not the phone's (1.0.8): with Sydney chosen on a phone in Oslo
+    // late in the evening the app opens on Sydney's date, the day the home screen widget shows.
+    var date by rememberSaveable { mutableStateOf(PlaceDay.today(zone)) }
     val noon = remember(date) { MoonPhase.noonUtc(date) }
     // The place's zone, not UTC. This is the whole fix for the app disagreeing with
     // moon.stormberry.as: see the KDoc on MoonCalc.times.
@@ -101,7 +104,6 @@ fun MoonTimesScreen(
     // dated there, as the website shows them (1.0.4, fix F-1).
     val lunations = remember(date, zone) { MoonPhase.nextLunations(date, zone) }
 
-    val timeFmt = remember { DateTimeFormatter.ofPattern("HH:mm") }
     val dateFmt = remember { DateTimeFormatter.ofPattern("EEEE d MMMM yyyy") }
 
     LazyColumn(
@@ -119,11 +121,11 @@ fun MoonTimesScreen(
 
         item {
             DateBar(
-                date = date,
                 label = date.format(dateFmt),
                 onPrev = { date = date.minusDays(1) },
                 onNext = { date = date.plusDays(1) },
-                onToday = { date = LocalDate.now() },
+                onToday = { date = PlaceDay.today(zone) },
+                isToday = date == PlaceDay.today(zone),
                 modifier = gutter,
             )
         }
@@ -192,8 +194,7 @@ fun MoonTimesScreen(
 
                         if (kind != LunarDayKind.NORMAL) Spacer(Modifier.height(12.dp))
 
-                        fun show(i: Instant?): String =
-                            i?.atZone(zone)?.format(timeFmt) ?: "—"
+                        fun show(i: Instant?): String = cardTime(i, zone)
 
                         TimeRow("Moonrise", show(times[LunarEvent.MOONRISE]), Moon.Blue)
                         // Suppressed when the moon is below the horizon for the whole day: a peak
@@ -224,7 +225,11 @@ fun MoonTimesScreen(
                 lonText = lonText,
                 onLonTextChange = { lonText = it },
                 onPlaceChosen = { chosen ->
-                    AlarmCapability.saveLocation(
+                    // Showing today for the old place: show today for the new one (PlaceDay).
+                    date = PlaceDay.afterPlaceChange(
+                        date, zone, PlaceDay.zoneOf(chosen.zoneId, ZoneId.systemDefault()), Instant.now()
+                    )
+                    PlaceStore.saveLocation(
                         context, chosen.label, chosen.latDeg, chosen.lonDeg, chosen.zoneId
                     )
                     // Every armed alarm is anchored to a location, so moving the location has
@@ -236,6 +241,13 @@ fun MoonTimesScreen(
             )
         }
 
+        // The website's "Explore the Stormberry Ecosystem" carousel, above the footer as there
+        // (1.0.8). Every card opens its website through ACTION_VIEW: no INTERNET permission.
+        item {
+            Spacer(Modifier.height(16.dp))
+            LabsCarousel(current = LabsApp.MOON_APP, colors = CarouselColors)
+        }
+
         // CheckLink's footer, edge to edge. The list's 16 dp spacing above it, and the 16 dp
         // here, make the 32 dp CheckLink leaves between its last card and its footer.
         item {
@@ -245,16 +257,38 @@ fun MoonTimesScreen(
     }
 }
 
+/**
+ * A time on the card: "18:42" in the place's zone, or an en dash (U+2013) when the event does not
+ * happen that day, the same text as on the home screen widgets (1.0.8; the card printed an em
+ * dash before, against the house style).
+ */
+internal fun cardTime(i: Instant?, zone: ZoneId): String = WidgetText.time(i, zone)
+
+/**
+ * The colours of moon.stormberry.as's carousel (`style.css`): `--text-secondary` heading,
+ * `--bg-card` cards with a `--border` edge (white at 7 per cent, as [Moon.Border]), and the
+ * `--accent-teal` border on the app's own card.
+ */
+private val CarouselColors = LabsCarouselColors(
+    title = Moon.TextSecondary,
+    label = Moon.TextPrimary,
+    cardFill = Moon.Card,
+    cardBorder = Moon.Border,
+    accent = Moon.Teal,
+    rule = Moon.Border,
+    checkmark = Moon.Background,
+)
+
 /** The 16 dp side gutter of every item except the full-width footer. */
 private val gutter = Modifier.padding(horizontal = 16.dp)
 
 @Composable
 private fun DateBar(
-    date: LocalDate,
     label: String,
     onPrev: () -> Unit,
     onNext: () -> Unit,
     onToday: () -> Unit,
+    isToday: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -276,7 +310,7 @@ private fun DateBar(
                     style = MaterialTheme.typography.bodyMedium,
                     color = Moon.TextPrimary,
                 )
-                if (date != LocalDate.now()) {
+                if (!isToday) {
                     TextButton(onClick = onToday) {
                         Text("Back to today", color = Moon.TextSecondary)
                     }

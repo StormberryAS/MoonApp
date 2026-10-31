@@ -13,9 +13,10 @@ import org.w3c.dom.Element
  *
  * `src/play/AndroidManifest.xml` is merged over `src/main/AndroidManifest.xml` under
  * `-PplayBuild=true` and does nothing but remove. So the guarantee is a relation between two
- * files: everything main asks for or declares, bar the launcher activity, must be removed by the
- * overlay. A permission or component added to main alone fails here, before it can reach a Play
- * bundle and a review gate.
+ * files: everything main asks for or declares, bar the launcher activity and the four home screen
+ * widget receivers (1.0.8, which need no permission), must be removed by the overlay. A
+ * permission or component added to main alone fails here, before it can reach a Play bundle and
+ * a review gate.
  *
  * The test reads the two source manifests; the merged manifest of the real bundle is checked by
  * the release notes (aapt2 on the bundle: no uses-permission, no alarm component).
@@ -67,15 +68,91 @@ class PlayManifestTest {
         }
     }
 
-    @Test fun theOverlayRemovesEveryComponentExceptTheLauncherActivity() {
-        val launcher = ".MainActivity"
+    /**
+     * What the Play build keeps: the launcher activity and, since 1.0.8, the home screen widgets
+     * (three providers and the receiver that redraws them), which need no permission.
+     */
+    private val keptForPlay = setOf(
+        ".MainActivity",
+        ".widget.MoonWidgetSmall",
+        ".widget.MoonWidgetMedium",
+        ".widget.MoonWidgetLarge",
+        ".widget.WidgetEventReceiver",
+    )
+
+    private val widgetProviders = listOf(".widget.MoonWidgetSmall", ".widget.MoonWidgetMedium", ".widget.MoonWidgetLarge")
+
+    private fun mainComponent(name: String): Element =
+        components.flatMap { main.application().kids(it) }.single { it.name() == name }
+
+    @Test fun theOverlayRemovesEveryComponentExceptTheLauncherActivityAndTheWidgets() {
         val all = mainComponents()
-        assertTrue(launcher in all)
         val removed = playRemovedComponents().toSet()
-        for (component in all.filter { it != launcher }) {
+        for (kept in keptForPlay) {
+            assertTrue("$kept must be declared in main", kept in all)
+            assertFalse("$kept must survive in the Play build", kept in removed)
+        }
+        for (component in all.filter { it !in keptForPlay }) {
             assertTrue("$component is declared in main but not removed for Play", component in removed)
         }
-        assertFalse("the launcher activity must survive in the Play build", launcher in removed)
+    }
+
+    @Test fun theWidgetsNeedNoPermission() {
+        // Actions only a receiver holding a permission may get; none may reach a kept receiver.
+        val needPermission = setOf(
+            "android.intent.action.BOOT_COMPLETED",
+            "android.intent.action.LOCKED_BOOT_COMPLETED",
+            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED",
+        )
+        for (name in keptForPlay.filter { it.startsWith(".widget.") }) {
+            val receiver = mainComponent(name)
+            assertEquals("$name is a receiver", "receiver", receiver.tagName)
+            assertEquals("$name must not require a permission", "", receiver.getAttributeNS(androidNs, "permission"))
+            val actions = receiver.kids("intent-filter").flatMap { it.kids("action") }.map { it.name() }
+            for (a in actions) assertFalse("$name listens for $a, which needs a permission", a in needPermission)
+        }
+        // And the main manifest still asks for exactly the nine alarm permissions.
+        assertEquals(
+            setOf(
+                "android.permission.USE_EXACT_ALARM", "android.permission.SCHEDULE_EXACT_ALARM",
+                "android.permission.POST_NOTIFICATIONS", "android.permission.RECEIVE_BOOT_COMPLETED",
+                "android.permission.WAKE_LOCK", "android.permission.VIBRATE",
+                "android.permission.USE_FULL_SCREEN_INTENT", "android.permission.FOREGROUND_SERVICE",
+                "android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED",
+            ),
+            mainPermissions().toSet(),
+        )
+        assertEquals(9, mainPermissions().size)
+    }
+
+    /**
+     * No widget receiver is exported (the system's broadcasts reach them anyway), so no other app
+     * can drive a refresh loop; and the clock receiver is off until a widget is placed, so the
+     * system never starts the app for TIME_SET when there is no widget.
+     */
+    @Test fun theWidgetReceiversAreNotExportedAndTheClockReceiverStartsDisabled() {
+        for (name in keptForPlay.filter { it.startsWith(".widget.") }) {
+            assertEquals("$name must not be exported", "false", mainComponent(name).getAttributeNS(androidNs, "exported"))
+        }
+        assertEquals(
+            ".widget.WidgetEventReceiver must be disabled in the manifest",
+            "false",
+            mainComponent(".widget.WidgetEventReceiver").getAttributeNS(androidNs, "enabled"),
+        )
+        for (name in widgetProviders) {
+            assertEquals("$name must be enabled", "", mainComponent(name).getAttributeNS(androidNs, "enabled"))
+        }
+    }
+
+    @Test fun everyWidgetProviderHasItsInfo() {
+        for (name in widgetProviders) {
+            val receiver = mainComponent(name)
+            val meta = receiver.kids("meta-data").singleOrNull { it.name() == "android.appwidget.provider" }
+            assertTrue("$name has no android.appwidget.provider meta-data", meta != null)
+            assertTrue("$name points at no provider info", meta!!.getAttributeNS(androidNs, "resource").startsWith("@xml/widget_"))
+            val actions = receiver.kids("intent-filter").flatMap { it.kids("action") }.map { it.name() }
+            assertEquals("$name filters APPWIDGET_UPDATE only", listOf("android.appwidget.action.APPWIDGET_UPDATE"), actions)
+        }
     }
 
     @Test fun theOverlayDeclaresNothingAndRemovesOnlyWhatExists() {

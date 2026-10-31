@@ -37,6 +37,10 @@ test('the F-1 to F-5 parity corpora are exactly what tools/gen-lunar-parity.ts w
   assert.match(out, /golden check OK: .*lunar-daykind-parity\.csv matches, 355 data rows/);
 });
 
+test('quarter-parity.csv is exactly what tools/gen-quarter-parity.ts writes from the page', () => {
+  assert.match(gen('gen-quarter-parity'), /golden check OK: .*quarter-parity\.csv matches, 475 data rows/);
+});
+
 test('citysearch-golden.csv is exactly what tools/gen-search-parity.ts writes from the page', () => {
   assert.match(gen('gen-search-parity'), /golden check OK: .*citysearch-golden\.csv matches, 162 data rows/);
 });

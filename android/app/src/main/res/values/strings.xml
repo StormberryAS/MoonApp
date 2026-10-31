@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">MoonApp</string>
+
+    <!--
+      The home screen widget picker (1.0.8): each widget's name and, on Android 12 and later, its
+      description. Everything the widgets show at run time is in widget/WidgetText.kt.
+    -->
+    <string name="widget_small_label">Moon</string>
+    <string name="widget_small_description">Today\'s moon as it looks from your hemisphere, and how much of it is lit.</string>
+    <string name="widget_medium_label">Moon and times</string>
+    <string name="widget_medium_description">Today\'s moon, with moonrise, transit and moonset for the place chosen in MoonApp.</string>
+    <string name="widget_large_label">Moon, times and phases</string>
+    <string name="widget_large_description">Today\'s moon and its times, with the dates of the next new moon, first quarter, full moon and last quarter.</string>
+
+    <!--
+      The placeholder of each widget until its first render (1.0.8, Marcos 2026-10-30): a widget
+      placed before MoonApp was ever opened stays on it on Android 12 to 14.
+    -->
+    <string name="widget_hint">Open MoonApp once to start the widget.</string>
 </resources>

@@ -11,4 +11,17 @@
 <resources>
     <color name="stormberry_background">#050810</color>
     <color name="stormberry_icon_background">#050810</color>
+
+    <!--
+      The home screen widgets (1.0.8): the app's palette from ui/Theme.kt, which the RemoteViews
+      layouts cannot read. The panel is the background at 95 per cent opacity (decision D2).
+    -->
+    <color name="widget_panel">#F2050810</color>
+    <color name="widget_text_primary">#E8EEFF</color>
+    <color name="widget_text_soft">#A9B7DA</color>
+    <color name="widget_text_secondary">#7B8FC4</color>
+    <color name="widget_border">#12FFFFFF</color>
+    <color name="widget_blue">#7B9FD4</color>
+    <color name="widget_violet">#9B7FD4</color>
+    <color name="widget_teal">#4FC3F7</color>
 </resources>

@@ -5,8 +5,8 @@ import android.content.Context
 /**
  * The small preferences that are not alarm rules and not the saved location.
  *
- * Location and rules already live in [no.stormberry.moonapp.alarm.AlarmCapability], in
- * DEVICE-PROTECTED storage, because `SystemEventReceiver` is directBootAware and has to read
+ * Location and rules already live in [PlaceStore] and [no.stormberry.moonapp.alarm.AlarmCapability],
+ * in DEVICE-PROTECTED storage, because `SystemEventReceiver` is directBootAware and has to read
  * rules back before the first unlock. This class deliberately does NOT go there: the only
  * thing it holds is which first-run notice the user has acknowledged, which nothing reads
  * before unlock, and putting it in the credential-encrypted store keeps the direct-boot

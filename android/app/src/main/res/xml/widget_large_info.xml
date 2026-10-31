@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The large widget "Moon, times and phases" (1.0.8): everything the 2x1 shows, plus the dates of
+  the next new moon, first quarter, full moon and last quarter. 4x2 by default, resizable from
+  3x2 up. Three arrangements, tall, wide and compact (LargeLayout), chosen by the size.
+  updatePeriodMillis is 0: MoonWidgets arms an inexact, non-wakeup refresh instead.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="110dp"
+    android:maxResizeWidth="560dp"
+    android:maxResizeHeight="400dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_large_tall"
+    android:previewLayout="@layout/widget_large_preview"
+    android:previewImage="@drawable/widget_moon_preview"
+    android:description="@string/widget_large_description"
+    tools:targetApi="31" />

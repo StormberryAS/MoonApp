@@ -8,7 +8,7 @@ import org.junit.Test
 
 /**
  * The Google Play build's footer. It has no alarms, so the two lines that used to speak of them are
- * reworded and nothing else in the footer differs. The copy is DRAFT until Marcos approves it.
+ * reworded and nothing else in the footer differs.
  */
 class PlayFooterTest {
 

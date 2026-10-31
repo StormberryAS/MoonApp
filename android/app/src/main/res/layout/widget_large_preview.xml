@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The picker preview of the large widget (1.0.8, Android 12 and later): widget_large_compact with
+  sample values (the labels in the text colour; the live widget colours them).
+  Shown only in the widget picker; never on a home screen.
+
+  The compact arrangement, not the tall one: the picker draws the preview at the widget's default
+  4x2 size on this phone, which on a small phone (360 dp wide) is only about 260 x 137 dp. The tall
+  arrangement needs about 180 dp of height and was cut off there, top and bottom. The compact one
+  fits from 180 x 100 dp, so the preview is whole on every phone.
+
+  The sample values are MoonApp's own figures for Oslo on Friday 20 November 2026 (80 per cent,
+  waxing gibbous), so the preview agrees with itself and with the sky.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true"
+    android:paddingStart="10dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="8dp"
+    tools:ignore="HardcodedText"
+    tools:targetApi="31">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:importantForAccessibility="noHideDescendants"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:adjustViewBounds="true"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/widget_moon_preview" />
+
+            <TextView
+                style="@style/Widget.MoonApp.Percent"
+                android:text="80%" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.MoonApp.MediumRow"
+                android:text="Rise 13:53" />
+
+            <TextView
+                style="@style/Widget.MoonApp.MediumRow"
+                android:text="Transit 20:51" />
+
+            <TextView
+                style="@style/Widget.MoonApp.MediumRow"
+                android:text="Set 02:30" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="2dp"
+                android:background="@color/widget_border" />
+
+            <TextView
+                style="@style/Widget.MoonApp.MediumRow"
+                android:text="Full moon 24 Nov" />
+
+            <TextView
+                style="@style/Widget.MoonApp.MediumRow"
+                android:text="Last quarter 1 Dec" />
+
+            <TextView
+                style="@style/Widget.MoonApp.MediumRow"
+                android:text="New moon 9 Dec" />
+
+            <TextView
+                style="@style/Widget.MoonApp.MediumRow"
+                android:text="First quarter 17 Dec" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

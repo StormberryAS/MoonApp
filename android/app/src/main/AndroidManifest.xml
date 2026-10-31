@@ -127,5 +127,66 @@
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!--
+          HOME SCREEN WIDGETS, 1.0.8: Moon (1x1), Moon and times (2x1), Moon, times and phases (4x2).
+          They need NO permission: RemoteViews, one inexact non-wakeup alarm (setWindow, RTC) and the
+          system's own widget updates after a reboot and an app update. No BOOT_COMPLETED here.
+          The Google Play build keeps all four receivers: its overlay does not remove them, and
+          PlayManifestTest checks that it never does.
+          None of the four is exported: the system delivers APPWIDGET_UPDATE, TIME_SET,
+          TIMEZONE_CHANGED and MY_PACKAGE_REPLACED from its own uid, which reaches a receiver that
+          is not exported, so no other app can make the widgets redraw in a loop.
+          WidgetEventReceiver is also disabled here: MoonWidgets enables it while a widget is
+          placed and disables it when the last one goes, so with no widget the system never starts
+          the app for a clock change. Its own refresh alarm reaches it by explicit component, so
+          that action is not in the filter.
+        -->
+        <receiver
+            android:name=".widget.MoonWidgetSmall"
+            android:exported="false"
+            android:label="@string/widget_small_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_small_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.MoonWidgetMedium"
+            android:exported="false"
+            android:label="@string/widget_medium_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_medium_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.MoonWidgetLarge"
+            android:exported="false"
+            android:label="@string/widget_large_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_large_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WidgetEventReceiver"
+            android:enabled="false"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

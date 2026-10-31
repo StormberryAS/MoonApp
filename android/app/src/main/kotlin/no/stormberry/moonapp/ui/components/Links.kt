@@ -23,7 +23,7 @@ fun openLink(context: Context, url: String): Boolean {
         context.startActivity(intent)
         true
     } catch (_: ActivityNotFoundException) {
-        Toast.makeText(context, "No app on this phone can open that link.", Toast.LENGTH_SHORT)
+        Toast.makeText(context, "No app on this device can open that link.", Toast.LENGTH_SHORT)
             .show()
         false
     }

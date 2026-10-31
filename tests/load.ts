@@ -161,6 +161,7 @@ export interface PageCity {
  */
 export interface PageFunctions {
   getNextLunations(fromDate: Date, tz: string): { nextNew: Date | null; nextFull: Date | null; newAt: Date | null; fullAt: Date | null };
+  phaseCrossing(t0: number, t1: number, target: number): number;
   moonTimesFrom(start: Date, lat: number, lon: number, hours?: number): { rise?: Date; set?: Date };
   lunarTransitFrom(dayStart: Date, lat: number, lon: number, hours?: number): Date | null;
   localYmd(at: Date, tz: string): [number, number, number];
@@ -175,6 +176,7 @@ export interface PageFunctions {
 /** Each page function's declared parameter count (Function.length), checked by fn(). */
 const PAGE_ARITY: { readonly [K in keyof PageFunctions]: number } = {
   getNextLunations: 2,
+  phaseCrossing: 3,
   moonTimesFrom: 3,
   lunarTransitFrom: 3,
   localYmd: 2,

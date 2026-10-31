@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The 2x1 widget (1.0.8): the moon over the percentage on the left, three rows on the right
+  (Rise, Transit, Set, or the website's "Always Up" and "Always Down" on a polar day).
+  MoonWidgets.renderMedium fills it; the rows are the lines of ONE TextView, each label in the
+  event's accent, so they shrink together, from 12sp to 8dp on narrow or low launchers (autosize,
+  Android 8 and later), and always share one text size. The moon column is 40 dp and the side padding 8 dp so that the
+  rows keep about 55 dp on the narrowest 2x1 seen (117 dp, Launcher3 on Android 12 with a 5-column
+  grid), enough for "Transit 03:35" at 8dp; with 48 dp and 10 dp it ended "Transit 0...".
+  No sample values: see widget_medium_preview.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true"
+    android:paddingStart="8dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="6dp"
+    tools:targetApi="31">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible"
+        android:gravity="center_vertical"
+        android:importantForAccessibility="noHideDescendants"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/moon"
+                android:layout_width="40dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:adjustViewBounds="true"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/widget_moon_blank" />
+
+            <TextView
+                android:id="@+id/percent"
+                style="@style/Widget.MoonApp.Percent"
+                android:layout_width="40dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/rows"
+                style="@style/Widget.MoonApp.MediumRows" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!--
+      Shown until the first render (1.0.8): a widget placed before MoonApp was ever opened stays
+      on this layout on Android 12 to 14, because the system sends a never-started app no widget
+      update. MoonWidgets hides it and shows the content above on every render.
+    -->
+    <TextView
+        android:id="@+id/hint"
+        style="@style/Widget.MoonApp.Hint"
+        android:text="@string/widget_hint" />
+</FrameLayout>

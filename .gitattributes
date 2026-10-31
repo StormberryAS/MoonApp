@@ -23,6 +23,9 @@
 /android/app/src/test/resources/lunation-parity.csv linguist-generated=true
 /android/app/src/test/resources/transit-parity.csv linguist-generated=true
 /android/app/src/test/resources/lunar-daykind-parity.csv linguist-generated=true
+# The quarter corpus for the home screen widget (1.0.8), written from the compiled page by
+# tools/gen-quarter-parity.ts and held to it by its --check mode.
+/android/app/src/test/resources/quarter-parity.csv linguist-generated=true
 # The city search corpus, written from the compiled page by tools/gen-search-parity.ts.
 /android/app/src/test/resources/citysearch-golden.csv linguist-generated=true
 # The page and search vectors, captured by tests/capture-vectors.ts and tests/capture-search.ts and

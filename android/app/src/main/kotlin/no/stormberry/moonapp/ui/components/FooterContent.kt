@@ -64,14 +64,14 @@ object FooterText {
     const val PERMISSIONS = "Alarm permissions only. No internet. No tracking."
 
     /**
-     * DRAFT for Marcos's approval: the Google Play build's replacement for [OFFLINE]. The Play build
+     * The Google Play build's replacement for [OFFLINE]. The Play build
      * has no alarms, so it must not say alarms; otherwise it is the same sentence, for the same test
      * (the APK has no INTERNET permission, so it works the same with the radio off).
      */
     const val OFFLINE_PLAY = "Your places never leave this device. Disconnect and try it."
 
     /**
-     * DRAFT for Marcos's approval: the Google Play build's replacement for [PERMISSIONS], and true
+     * The Google Play build's replacement for [PERMISSIONS], and true
      * only because the Play manifest removes every permission (PlayManifestTest, and the permission
      * check in the build notes: the bundle's manifest has no uses-permission at all).
      */

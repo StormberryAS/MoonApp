@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The 2x1 widget "Moon and times" (1.0.8): today's moon, the lit percentage, and today's moonrise,
+  transit and moonset for the place chosen in the app. Resizable sideways only.
+  updatePeriodMillis is 0: MoonWidgets arms an inexact, non-wakeup refresh instead.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:minWidth="110dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:maxResizeWidth="320dp"
+    android:maxResizeHeight="120dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:resizeMode="horizontal"
+    android:widgetCategory="home_screen"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_medium"
+    android:previewLayout="@layout/widget_medium_preview"
+    android:previewImage="@drawable/widget_moon_preview"
+    android:description="@string/widget_medium_description"
+    tools:targetApi="31" />

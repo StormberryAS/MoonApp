@@ -28,46 +28,10 @@ object AlarmCapability {
     // The label and the city name are user text and may contain a pipe, which would corrupt
     // the pipe-delimited record and silently drop the rule on the next load. Escape both.
     private fun esc(s: String) = s.replace("\\", "\\\\").replace("|", "\\p")
-    private const val KEY_CITY = "loc_city"
-    private const val KEY_LAT = "loc_lat"
-    private const val KEY_LON = "loc_lon"
-    private const val KEY_TZ = "loc_tz"
 
-    /**
-     * The chosen location, which used to live only in a Compose `remember` and was therefore
-     * reset to a hardcoded Oslo on every app start. An app whose whole purpose is
-     * location-specific moon times must not forget where the user is. Fixed 2026-09-04.
-     */
-    data class SavedLocation(val city: String, val lat: Double, val lon: Double, val tz: String?)
-
-    fun loadLocation(context: Context): SavedLocation {
-        val p = getPrefs(context)
-        return SavedLocation(
-            p.getString(KEY_CITY, "Oslo") ?: "Oslo",
-            java.lang.Double.longBitsToDouble(p.getLong(KEY_LAT, java.lang.Double.doubleToRawLongBits(59.9139))),
-            java.lang.Double.longBitsToDouble(p.getLong(KEY_LON, java.lang.Double.doubleToRawLongBits(10.7522))),
-            p.getString(KEY_TZ, "Europe/Oslo")
-        )
-    }
-
-    /**
-     * commit(), not apply(), here and in [saveRule] and [deleteRule].
-     *
-     * apply() hands the write to a background thread and returns. That is the right default
-     * for a preference nobody would miss, and the wrong one for alarm rules: a process death
-     * between the return and the flush loses the alarm silently, and the user finds out by not
-     * being woken. Observed on 2026-09-05 when an `am force-stop` straight after a save left
-     * no moonapp_alarms.xml on disk at all. These writes are user-initiated, infrequent, and
-     * a few milliseconds of blocking on a file this small is not a cost worth trading for.
-     */
-    fun saveLocation(context: Context, city: String, lat: Double, lon: Double, tz: String?) {
-        getPrefs(context).edit()
-            .putString(KEY_TZ, tz)
-            .putString(KEY_CITY, city)
-            .putLong(KEY_LAT, java.lang.Double.doubleToRawLongBits(lat))
-            .putLong(KEY_LON, java.lang.Double.doubleToRawLongBits(lon))
-            .commit()
-    }
+    // The chosen place (loc_city, loc_lat, loc_lon, loc_tz) is in this same file, read and
+    // written by data/PlaceStore since 1.0.8, so that the Google Play build, which has no alarms
+    // but has the home screen widgets, carries no class from this package.
 
     private fun unesc(s: String) = s.replace("\\p", "|").replace("\\\\", "\\")
 
@@ -90,6 +54,15 @@ object AlarmCapability {
 
     /**
      * Saves a lunar alarm rule and updates its system schedule.
+     *
+     * commit(), not apply(), here and in [deleteRule] (and in PlaceStore.saveLocation).
+     *
+     * apply() hands the write to a background thread and returns. That is the right default
+     * for a preference nobody would miss, and the wrong one for alarm rules: a process death
+     * between the return and the flush loses the alarm silently, and the user finds out by not
+     * being woken. Observed on 2026-09-05 when an `am force-stop` straight after a save left
+     * no moonapp_alarms.xml on disk at all. These writes are user-initiated, infrequent, and
+     * a few milliseconds of blocking on a file this small is not a cost worth trading for.
      */
     fun saveRule(context: Context, rule: MoonAlarmRule) {
         val prefs = getPrefs(context)
